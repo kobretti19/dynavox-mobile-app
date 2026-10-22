@@ -327,6 +327,12 @@ export default function Vacations() {
                   {isAdmin ? ' ✎' : ''}
                 </Text>
               </Pressable>
+              {row.carryover ? (
+                <Text style={[styles.small, { color: row.carryover < 0 ? colors.red : colors.green }]}>
+                  {t('vacations.colCarryover')}: {row.carryover > 0 ? '+' : ''}
+                  {fmtDays(row.carryover)}
+                </Text>
+              ) : null}
               <Text style={styles.small}>
                 {t('vacations.colTaken')}: {fmtDays(row.taken)}
               </Text>

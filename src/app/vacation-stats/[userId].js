@@ -22,8 +22,10 @@ export default function VacationStats() {
   if (!data) return <ErrorBox message={error} onRetry={refresh} />;
 
   const s = data.summary;
-  const usedPct = s.allowance > 0 ? Math.min(100, (s.taken / s.allowance) * 100) : 0;
-  const plannedPct = s.allowance > 0 ? Math.min(100 - usedPct, (s.planned / s.allowance) * 100) : 0;
+  // Available this year = allowance + days carried over from earlier years.
+  const available = s.allowance + (s.carryover || 0);
+  const usedPct = available > 0 ? Math.min(100, (s.taken / available) * 100) : 0;
+  const plannedPct = available > 0 ? Math.min(100 - usedPct, (s.planned / available) * 100) : 0;
   const maxMonth = Math.max(1, ...data.months.map((m) => m.vacation + m.sick + m.other));
   const today = todayKey();
   const state = (e) => (e.end_date < today ? t('vacations.statePast') : e.start_date > today ? t('vacations.stateUpcoming') : t('vacations.stateNow'));
@@ -39,17 +41,24 @@ export default function VacationStats() {
 
       <Row style={{ marginBottom: 8 }}>
         <StatTile label={t('vacations.colAllowance')} value={fmtDays(s.allowance)} />
+        <StatTile
+          label={t('vacations.colCarryover')}
+          value={`${(s.carryover || 0) > 0 ? '+' : ''}${fmtDays(s.carryover || 0)}`}
+          color={(s.carryover || 0) < 0 ? colors.red : colors.green}
+        />
+        <StatTile label={t('vacations.colRemaining')} value={fmtDays(s.remaining)} color={s.remaining < 0 ? colors.red : colors.green} />
+      </Row>
+      <Row style={{ marginBottom: 8 }}>
         <StatTile label={t('vacations.colTaken')} value={fmtDays(s.taken)} color={colors.brand} />
         <StatTile label={t('vacations.colPlanned')} value={fmtDays(s.planned)} color={colors.blue} />
       </Row>
       <Row style={{ marginBottom: 12 }}>
-        <StatTile label={t('vacations.colRemaining')} value={fmtDays(s.remaining)} color={s.remaining < 0 ? colors.red : colors.green} />
         <StatTile label={t('vacations.colSick')} value={fmtDays(s.sick)} color={colors.red} />
         <StatTile label={t('vacations.colOther')} value={fmtDays(s.other)} color={colors.gray} />
       </Row>
 
       <Card>
-        <Text style={[styles.small, { marginBottom: 6 }]}>{t('vacations.allowanceUsed', { used: fmtDays(s.taken + s.planned), total: fmtDays(s.allowance) })}</Text>
+        <Text style={[styles.small, { marginBottom: 6 }]}>{t('vacations.allowanceUsed', { used: fmtDays(s.taken + s.planned), total: fmtDays(available) })}</Text>
         <View style={{ height: 12, borderRadius: 6, backgroundColor: colors.grayBg, overflow: 'hidden', flexDirection: 'row' }}>
           <View style={{ width: `${usedPct}%`, backgroundColor: colors.brand }} />
           <View style={{ width: `${plannedPct}%`, backgroundColor: '#60A5FA' }} />
