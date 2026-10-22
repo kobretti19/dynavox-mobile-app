@@ -1,0 +1,46 @@
+const en = {
+  partNameRequired: 'Part Name *',
+  skuOrderNumber: 'SKU / Order Number',
+  colorLabel: 'Color',
+  supplierLabel: 'Supplier',
+  articleId: 'Article ID',
+  purchasePrice: 'Purchase Price (CHF)',
+  sellingPrice: 'Selling Price (CHF)',
+  minStockLevel: 'Min Stock Level',
+  saveChanges: 'Save Changes',
+  partInformation: 'Part Information',
+  na: 'N/A',
+  createdLabel: 'Created',
+  totalStock: 'Total Stock',
+  totalValue: 'Total Value',
+  loadingPartDetails: 'Loading part details...',
+  noColorsAssigned: 'No colors assigned to this part',
+  purchaseCol: 'Purchase',
+  sellingCol: 'Selling',
+  orderNumberCol: 'Order Number',
+};
+
+const de = {
+  partNameRequired: 'Teilename *',
+  skuOrderNumber: 'SKU / Bestellnummer',
+  colorLabel: 'Farbe',
+  supplierLabel: 'Lieferant',
+  articleId: 'Artikel-ID',
+  purchasePrice: 'Einkaufspreis (CHF)',
+  sellingPrice: 'Verkaufspreis (CHF)',
+  minStockLevel: 'Mindestbestand',
+  saveChanges: 'Änderungen speichern',
+  partInformation: 'Teilinformationen',
+  na: 'k. A.',
+  createdLabel: 'Erstellt',
+  totalStock: 'Gesamtbestand',
+  totalValue: 'Gesamtwert',
+  loadingPartDetails: 'Teildetails werden geladen...',
+  noColorsAssigned: 'Diesem Teil sind keine Farben zugeordnet',
+  purchaseCol: 'Einkauf',
+  sellingCol: 'Verkauf',
+  orderNumberCol: 'Bestellnummer',
+};
+
+const partDetails = { en, de };
+export default partDetails;

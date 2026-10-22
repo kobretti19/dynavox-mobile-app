@@ -1,0 +1,36 @@
+// Same palette as the web app (Tailwind classes there).
+export const colors = {
+  brand: '#361826',
+  brandLight: '#F0F0F0',
+  bg: '#F5F5F7',
+  card: '#FFFFFF',
+  text: '#111827',
+  textMuted: '#6B7280',
+  textLight: '#9CA3AF',
+  border: '#E5E7EB',
+  blue: '#2563EB',
+  blueBg: '#DBEAFE',
+  green: '#15803D',
+  greenBg: '#DCFCE7',
+  red: '#DC2626',
+  redBg: '#FEE2E2',
+  yellow: '#A16207',
+  yellowBg: '#FEF9C3',
+  orange: '#C2410C',
+  orangeBg: '#FFEDD5',
+  purple: '#7E22CE',
+  purpleBg: '#F3E8FF',
+  gray: '#4B5563',
+  grayBg: '#F3F4F6',
+};
+
+export const tone = {
+  gray: { color: colors.gray, bg: colors.grayBg },
+  blue: { color: colors.blue, bg: colors.blueBg },
+  green: { color: colors.green, bg: colors.greenBg },
+  red: { color: colors.red, bg: colors.redBg },
+  yellow: { color: colors.yellow, bg: colors.yellowBg },
+  orange: { color: colors.orange, bg: colors.orangeBg },
+  purple: { color: colors.purple, bg: colors.purpleBg },
+  brand: { color: '#FFFFFF', bg: colors.brand },
+};

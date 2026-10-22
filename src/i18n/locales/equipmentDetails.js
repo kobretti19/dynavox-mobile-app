@@ -1,0 +1,48 @@
+const en = {
+  equipmentInformation: 'Equipment Information',
+  model: 'Model',
+  status: 'Status',
+  active: 'ACTIVE',
+  category: 'Category',
+  brand: 'Brand',
+  serialNumber: 'Serial Number',
+  articleId: 'Article ID',
+  createdFromTemplate: 'Created From Template',
+  productionDate: 'Production Date',
+  createdBy: 'Created By',
+  createdAt: 'Created At',
+  partsUsedCount: 'Parts Used ({{count}})',
+  loadingParts: 'Loading parts...',
+  noPartsRecorded: 'No parts recorded',
+  colPart: 'Part',
+  colColor: 'Color',
+  colSku: 'SKU',
+  colQtyUsed: 'Qty Used',
+  colNotes: 'Notes',
+};
+
+const de = {
+  equipmentInformation: 'Ausrüstungsinformationen',
+  model: 'Modell',
+  status: 'Status',
+  active: 'AKTIV',
+  category: 'Kategorie',
+  brand: 'Marke',
+  serialNumber: 'Seriennummer',
+  articleId: 'Artikel-ID',
+  createdFromTemplate: 'Aus Vorlage erstellt',
+  productionDate: 'Produktionsdatum',
+  createdBy: 'Erstellt von',
+  createdAt: 'Erstellt am',
+  partsUsedCount: 'Verwendete Teile ({{count}})',
+  loadingParts: 'Teile werden geladen...',
+  noPartsRecorded: 'Keine Teile erfasst',
+  colPart: 'Teil',
+  colColor: 'Farbe',
+  colSku: 'SKU',
+  colQtyUsed: 'Verw. Menge',
+  colNotes: 'Notizen',
+};
+
+const equipmentDetails = { en, de };
+export default equipmentDetails;

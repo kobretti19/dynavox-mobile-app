@@ -1,0 +1,48 @@
+const en = {
+  title: 'Users',
+  subtitle: 'Manage login accounts and roles',
+  addUser: '+ Add User',
+  errorLoading: 'Error loading users: {{error}}',
+  noUsersTitle: 'No Users Yet',
+  noUsersMessage: 'Create the first login account',
+  loginName: 'Login Name',
+  role: 'Role',
+  you: '(you)',
+  cantDeleteSelf: "You can't delete your own account",
+  editUser: 'Edit User',
+  createUser: 'Create New User',
+  fullName: 'Full Name',
+  password: 'Password',
+  passwordPlaceholderEdit: 'Leave blank to keep current',
+  passwordRequiredError: 'Password is required for a new account.',
+  saveFailed: 'Failed to save user',
+  saveChanges: 'Save Changes',
+  deleteUser: 'Delete User',
+  confirmDeletePermanent: 'Are you sure you want to delete "{{name}}"? This cannot be undone.',
+};
+
+const de = {
+  title: 'Benutzer',
+  subtitle: 'Login-Konten und Rollen verwalten',
+  addUser: '+ Benutzer hinzufügen',
+  errorLoading: 'Fehler beim Laden der Benutzer: {{error}}',
+  noUsersTitle: 'Noch keine Benutzer',
+  noUsersMessage: 'Erstellen Sie das erste Login-Konto',
+  loginName: 'Anmeldename',
+  role: 'Rolle',
+  you: '(Sie)',
+  cantDeleteSelf: 'Sie können Ihr eigenes Konto nicht löschen',
+  editUser: 'Benutzer bearbeiten',
+  createUser: 'Neuen Benutzer erstellen',
+  fullName: 'Vollständiger Name',
+  password: 'Passwort',
+  passwordPlaceholderEdit: 'Leer lassen, um das aktuelle beizubehalten',
+  passwordRequiredError: 'Für ein neues Konto ist ein Passwort erforderlich.',
+  saveFailed: 'Benutzer konnte nicht gespeichert werden',
+  saveChanges: 'Änderungen speichern',
+  deleteUser: 'Benutzer löschen',
+  confirmDeletePermanent: 'Möchten Sie „{{name}}" wirklich löschen? Dies kann nicht rückgängig gemacht werden.',
+};
+
+const users = { en, de };
+export default users;

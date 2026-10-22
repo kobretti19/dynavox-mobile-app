@@ -1,0 +1,58 @@
+const en = {
+  colModel: 'Model',
+  colSerialNumber: 'Serial Number',
+  colArticleId: 'Article ID',
+  colCategory: 'Category',
+  colBrand: 'Brand',
+  colCreatedBy: 'Created By',
+  colDateCreated: 'Date Created',
+  colActions: 'Actions',
+  fromPrefix: 'from: {{name}}',
+  unknown: 'Unknown',
+  view: 'View',
+  saveAsTemplate: 'Save as Template',
+  edit: 'Edit',
+  delete: 'Delete',
+  editEquipmentTitle: 'Edit Equipment',
+  modelName: 'Model Name',
+  serialNumber: 'Serial Number',
+  brand: 'Brand',
+  category: 'Category',
+  articleId: 'Article ID',
+  cancel: 'Cancel',
+  saveChanges: 'Save Changes',
+  deleteEquipmentTitle: 'Delete Equipment',
+  confirmDeleteMessage:
+    'Are you sure you want to delete "{{model}}"? The parts and components used to build it will be returned to stock. This action cannot be undone.',
+};
+
+const de = {
+  colModel: 'Modell',
+  colSerialNumber: 'Seriennummer',
+  colArticleId: 'Artikel-ID',
+  colCategory: 'Kategorie',
+  colBrand: 'Marke',
+  colCreatedBy: 'Erstellt von',
+  colDateCreated: 'Erstellungsdatum',
+  colActions: 'Aktionen',
+  fromPrefix: 'von: {{name}}',
+  unknown: 'Unbekannt',
+  view: 'Ansehen',
+  saveAsTemplate: 'Als Vorlage speichern',
+  edit: 'Bearbeiten',
+  delete: 'Löschen',
+  editEquipmentTitle: 'Ausrüstung bearbeiten',
+  modelName: 'Modellname',
+  serialNumber: 'Seriennummer',
+  brand: 'Marke',
+  category: 'Kategorie',
+  articleId: 'Artikel-ID',
+  cancel: 'Abbrechen',
+  saveChanges: 'Änderungen speichern',
+  deleteEquipmentTitle: 'Ausrüstung löschen',
+  confirmDeleteMessage:
+    'Möchten Sie "{{model}}" wirklich löschen? Die dafür verwendeten Teile und Komponenten werden wieder ins Lager gebucht. Diese Aktion kann nicht rückgängig gemacht werden.',
+};
+
+const equipmentTable = { en, de };
+export default equipmentTable;
