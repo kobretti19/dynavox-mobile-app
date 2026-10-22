@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, tone } from '../theme';
+import { useLanguage } from '../context/LanguageContext';
 
 export const Card = ({ children, style, onPress, onLongPress }) => {
   if (onPress || onLongPress) {
@@ -259,7 +260,7 @@ export const Select = ({
   options,
   onChange,
   placeholder = '-',
-  searchPlaceholder = '🔍',
+  searchPlaceholder,
   allowClear,
   allowCustom,
   onCreate,
@@ -267,6 +268,7 @@ export const Select = ({
   hint,
   disabled,
 }) => {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
   useEffect(() => {
@@ -292,11 +294,11 @@ export const Select = ({
       </Pressable>
       <Sheet visible={open} onClose={() => setOpen(false)} title={label || placeholder} scroll={false}>
         <View style={{ padding: 12 }}>
-          <View style={styles.searchBox}>
+          <View style={[styles.searchBox, { flex: 0 }]}>
             <TextInput
               value={q}
               onChangeText={setQ}
-              placeholder={searchPlaceholder}
+              placeholder={searchPlaceholder || `🔍 ${t('common.search')}…`}
               placeholderTextColor={colors.textLight}
               style={styles.searchInput}
               autoFocus={options.length > 8}
@@ -371,6 +373,7 @@ export const Select = ({
 // Pick several options (chips). value: array of option values.
 export const MultiSelect = ({ label, value = [], options, onChange, placeholder = '-', hint }) => {
   const [open, setOpen] = useState(false);
+  const { t } = useLanguage();
   const [q, setQ] = useState('');
   const selected = options.filter((o) => value.includes(o.value));
   const query = q.trim().toLowerCase();
@@ -388,11 +391,11 @@ export const MultiSelect = ({ label, value = [], options, onChange, placeholder 
       </Pressable>
       <Sheet visible={open} onClose={() => setOpen(false)} title={label} actionLabel='OK' onAction={() => setOpen(false)} scroll={false}>
         <View style={{ padding: 12 }}>
-          <View style={styles.searchBox}>
+          <View style={[styles.searchBox, { flex: 0 }]}>
             <TextInput
               value={q}
               onChangeText={setQ}
-              placeholder='🔍'
+              placeholder={`🔍 ${t('common.search')}…`}
               placeholderTextColor={colors.textLight}
               style={styles.searchInput}
               autoCorrect={false}
