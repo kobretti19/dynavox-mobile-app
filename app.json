@@ -16,6 +16,7 @@
     },
     "android": {
       "package": "ch.dynavox.inventory",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#3B5BE8",
         "foregroundImage": "./assets/logo.png"

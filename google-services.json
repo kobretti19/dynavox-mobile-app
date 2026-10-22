@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "703899872853",
+    "project_id": "dynavox-inventory",
+    "storage_bucket": "dynavox-inventory.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:703899872853:android:6940ba6cd9c401bf5c2edc",
+        "android_client_info": {
+          "package_name": "ch.dynavox.inventory"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC5aX_Ut7rHBojb8dfPg2puAfdsY5lq7Ac"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
