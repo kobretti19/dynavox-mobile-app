@@ -23,7 +23,7 @@ export const dealerFields = (t) => [
 ];
 
 export const deviceFields = (t) => [
-  { key: 'serial_number', label: t('devices.serialNumber'), required: true, autoCapitalize: 'characters', autoCorrect: false },
+  { key: 'serial_number', label: t('devices.serialNumber'), required: true, autoCapitalize: 'characters', autoCorrect: false, scannable: true },
   { key: 'brand', label: t('devices.brand') },
   { key: 'model', label: t('devices.model') },
 ];

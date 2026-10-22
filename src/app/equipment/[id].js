@@ -23,7 +23,7 @@ export default function EquipmentDetail() {
 
   const fields = [
     { key: 'model', label: t('equipmentTable.modelName'), required: true },
-    { key: 'serial_number', label: t('equipmentTable.serialNumber'), autoCapitalize: 'characters' },
+    { key: 'serial_number', label: t('equipmentTable.serialNumber'), autoCapitalize: 'characters', scannable: true },
     { key: 'brand', label: t('equipmentTable.brand') },
     { key: 'category', label: t('equipmentTable.category') },
     { key: 'article_id', label: t('equipmentTable.articleId') },

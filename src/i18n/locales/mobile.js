@@ -80,6 +80,14 @@ const en = {
   sendEmail: 'E-mail',
   copy: 'Copy',
   copied: 'Copied',
+  modeText: 'Text / serial no.',
+  modeBarcode: 'Barcode / QR',
+  ocrHint: 'Hold the serial number inside the frame and press the button',
+  ocrPick: 'Tap the correct serial number:',
+  ocrNothing: 'No text recognised -- take a sharper photo or type it.',
+  ocrEditHint: 'Long-press an entry to correct it before using it.',
+  ocrRetake: 'Take another photo',
+  scanSerial: 'Scan serial no.',
 };
 
 const de = {
@@ -163,6 +171,14 @@ const de = {
   sendEmail: 'E-Mail',
   copy: 'Kopieren',
   copied: 'Kopiert',
+  modeText: 'Text / Seriennr.',
+  modeBarcode: 'Barcode / QR',
+  ocrHint: 'Seriennummer in den Rahmen halten und Auslöser drücken',
+  ocrPick: 'Richtige Seriennummer antippen:',
+  ocrNothing: 'Kein Text erkannt -- schärferes Foto aufnehmen oder eintippen.',
+  ocrEditHint: 'Eintrag lange drücken, um ihn vor dem Übernehmen zu korrigieren.',
+  ocrRetake: 'Neues Foto',
+  scanSerial: 'Seriennr. scannen',
 };
 
 export default { en, de };

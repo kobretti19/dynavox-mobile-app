@@ -28,6 +28,7 @@ import {
   styles,
 } from '../../components/ui';
 import { colors } from '../../theme';
+import ScanModal from '../../components/ScanModal';
 
 const formatFileSize = (bytes) => {
   if (bytes < 1024) return `${bytes} B`;
@@ -72,6 +73,7 @@ export default function RepairDetail() {
   const [statusNotes, setStatusNotes] = useState('');
   const [partForm, setPartForm] = useState({ part_id: null, quantity: '1' });
   const [busy, setBusy] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
   const skipAutosave = useRef(true);
   const saveTimer = useRef(null);
 
@@ -369,8 +371,23 @@ export default function RepairDetail() {
                 })
               }
             />
+            <Button title={t('mobile.scanSerial')} icon='📷' small variant='secondary' style={{ alignSelf: 'flex-start', marginTop: -6 }} onPress={() => setScanOpen(true)} />
           </View>
         </Card>
+
+        <ScanModal
+          visible={scanOpen}
+          onClose={() => setScanOpen(false)}
+          onScanned={(serial) => {
+            setScanOpen(false);
+            const existing = lookups.devices.find((d) => String(d.serial_number).trim().toLowerCase() === serial.toLowerCase());
+            run(async () => {
+              // The backend reuses a device with that serial or creates it.
+              await repairsAPI.addDevice(id, existing ? { device_id: existing.id } : { serial_number: serial });
+              loadLookups();
+            });
+          }}
+        />
 
         {/* Photos & files */}
         <Card>

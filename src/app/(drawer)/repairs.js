@@ -26,6 +26,7 @@ import {
   styles,
 } from '../../components/ui';
 import DateField from '../../components/DateField';
+import ScanModal from '../../components/ScanModal';
 import { colors, tone } from '../../theme';
 
 const emptyFilters = { status: null, type: null, customer: null, dealer: null, device: null, from: null, to: null, min: '', max: '' };
@@ -43,6 +44,7 @@ export default function Repairs() {
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
   const params = useLocalSearchParams();
 
   const loadLookups = async () => {
@@ -99,6 +101,23 @@ export default function Repairs() {
     loadLookups();
     router.setParams({ new: undefined, device: undefined });
   }, [params.new, params.device]);
+
+  // Scanned serial -> pick the existing device, or create it.
+  const useScannedSerial = async (serial) => {
+    setScanOpen(false);
+    const existing = lookups.devices.find((d) => String(d.serial_number).trim().toLowerCase() === serial.toLowerCase());
+    if (existing) {
+      setForm((f) => ({ ...f, device_id: existing.id }));
+      return;
+    }
+    try {
+      const res = await devicesAPI.create({ serial_number: serial });
+      await loadLookups();
+      setForm((f) => ({ ...f, device_id: res.data.data.id }));
+    } catch (err) {
+      showError(t('common.error'), t('mobile.saveFailed', { error: errorMessage(err) }));
+    }
+  };
 
   const create = async () => {
     setSaving(true);
@@ -322,6 +341,15 @@ export default function Repairs() {
           }}
           onChange={(v) => setForm({ ...form, device_id: v })}
         />
+        <Button
+          title={t('mobile.scanSerial')}
+          icon='📷'
+          small
+          variant='secondary'
+          style={{ alignSelf: 'flex-start', marginTop: -6, marginBottom: 14 }}
+          onPress={() => setScanOpen(true)}
+        />
+        <ScanModal visible={scanOpen} onClose={() => setScanOpen(false)} onScanned={useScannedSerial} />
         <Input
           label={t('repairs.fieldAccessories')}
           value={form.accessories}

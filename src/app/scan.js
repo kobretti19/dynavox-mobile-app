@@ -9,6 +9,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { buildReportId, partStatus, repairStatusColor } from '../utils/status';
 import { Badge, Button, Card, Row, styles } from '../components/ui';
 import { colors } from '../theme';
+import ScanModal from '../components/ScanModal';
 
 const norm = (v) => String(v || '').trim().toLowerCase();
 
@@ -47,6 +48,7 @@ export default function Scan() {
   const [manual, setManual] = useState('');
   const [results, setResults] = useState(null);
   const [searching, setSearching] = useState(false);
+  const [ocrOpen, setOcrOpen] = useState(false);
   const locked = useRef(false);
 
   const search = async (value) => {
@@ -115,7 +117,15 @@ export default function Scan() {
               <Text style={{ color: '#FFF', marginTop: 16, fontSize: 15, textShadowColor: '#000', textShadowRadius: 4 }}>{t('mobile.scanHint')}</Text>
             </View>
           ) : null}
-          <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: 16, paddingBottom: insets.bottom + 16, backgroundColor: 'rgba(0,0,0,0.6)' }}>
+          <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: 16, paddingBottom: insets.bottom + 16, backgroundColor: 'rgba(0,0,0,0.6)', gap: 10 }}>
+            <Button
+              title={`🔤 ${t('mobile.modeText')}`}
+              variant='secondary'
+              onPress={() => {
+                locked.current = true;
+                setOcrOpen(true);
+              }}
+            />
             <Row>
               <TextInput
                 value={manual}
@@ -197,6 +207,19 @@ export default function Scan() {
           ) : null}
         </ScrollView>
       )}
+
+      <ScanModal
+        visible={ocrOpen}
+        initialMode='text'
+        onClose={() => {
+          setOcrOpen(false);
+          locked.current = false;
+        }}
+        onScanned={(value) => {
+          setOcrOpen(false);
+          search(value);
+        }}
+      />
 
       <Pressable
         onPress={() => router.back()}

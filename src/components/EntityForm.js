@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { errorMessage } from '../api/client';
 import { useLanguage } from '../context/LanguageContext';
-import { Input, Sheet, showError } from './ui';
+import { Button, Input, Sheet, showError } from './ui';
+import ScanModal from './ScanModal';
 
 // Simple create/edit sheet for flat records (customers, dealers, devices,
 // users...). fields: [{ key, label, required?, keyboardType?, multiline?,
@@ -10,6 +11,7 @@ const EntityForm = ({ visible, title, fields, initial, onClose, onSubmit, childr
   const { t } = useLanguage();
   const [values, setValues] = useState({});
   const [saving, setSaving] = useState(false);
+  const [scanKey, setScanKey] = useState(null);
 
   useEffect(() => {
     if (!visible) return;
@@ -54,7 +56,32 @@ const EntityForm = ({ visible, title, fields, initial, onClose, onSubmit, childr
           hint={f.hint}
           placeholder={f.placeholder}
         />
-      ))}
+      )).reduce((acc, input, i) => {
+        acc.push(input);
+        // Fields marked scannable get a camera button (serial numbers...).
+        if (fields[i].scannable) {
+          acc.push(
+            <Button
+              key={`${fields[i].key}-scan`}
+              title={t('mobile.scanSerial')}
+              icon='📷'
+              small
+              variant='secondary'
+              style={{ alignSelf: 'flex-start', marginTop: -6, marginBottom: 14 }}
+              onPress={() => setScanKey(fields[i].key)}
+            />,
+          );
+        }
+        return acc;
+      }, [])}
+      <ScanModal
+        visible={!!scanKey}
+        onClose={() => setScanKey(null)}
+        onScanned={(code) => {
+          setValues((prev) => ({ ...prev, [scanKey]: code }));
+          setScanKey(null);
+        }}
+      />
       {children}
     </Sheet>
   );
