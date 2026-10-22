@@ -19,7 +19,10 @@
       "adaptiveIcon": {
         "backgroundColor": "#3B5BE8",
         "foregroundImage": "./assets/logo.png"
-      }
+      },
+      "permissions": [
+        "android.permission.CAMERA"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -57,7 +60,16 @@
       "expo-localization"
     ],
     "extra": {
-      "apiUrl": "https://dynservice.dynavox.ch/api"
-    }
+      "apiUrl": "https://dynservice.dynavox.ch/api",
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "ea9448c3-46cb-485d-91d2-375d7b1beb5f"
+      }
+    },
+    "owner": "dynavox"
   }
 }
