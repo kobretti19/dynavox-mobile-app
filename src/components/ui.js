@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -214,11 +215,50 @@ export const Row = ({ children, style, gap = 8 }) => (
 );
 
 // Full-screen form/sheet with a header (close, title, optional action).
+// On Android the app is edge-to-edge, so the window doesn't shrink for the
+// keyboard: measure how much of the sheet it covers, pad by that and scroll
+// the focused input into view.
+const useAndroidKeyboard = (visible, rootRef, scrollRef, contentRef) => {
+  const [overlap, setOverlap] = useState(0);
+  useEffect(() => {
+    if (Platform.OS !== 'android' || !visible) return undefined;
+    const show = Keyboard.addListener('keyboardDidShow', (e) => {
+      rootRef.current?.measureInWindow((x, y, w, h) => {
+        setOverlap(Math.max(0, y + h - e.endCoordinates.screenY));
+        setTimeout(() => {
+          const input = TextInput.State.currentlyFocusedInput?.();
+          if (!input || !contentRef.current || !scrollRef.current) return;
+          input.measureLayout(
+            contentRef.current,
+            (ix, iy) => scrollRef.current?.scrollTo({ y: Math.max(0, iy - 40), animated: true }),
+            () => {},
+          );
+        }, 150);
+      });
+    });
+    const hide = Keyboard.addListener('keyboardDidHide', () => setOverlap(0));
+    return () => {
+      show.remove();
+      hide.remove();
+      setOverlap(0);
+    };
+  }, [visible, rootRef, scrollRef, contentRef]);
+  return overlap;
+};
+
 export const Sheet = ({ visible, onClose, title, children, actionLabel, onAction, actionLoading, scroll = true }) => {
   const insets = useSafeAreaInsets();
+  const rootRef = useRef(null);
+  const scrollRef = useRef(null);
+  const contentRef = useRef(null);
+  const kb = useAndroidKeyboard(visible, rootRef, scrollRef, contentRef);
   return (
     <Modal visible={visible} animationType='slide' presentationStyle='pageSheet' onRequestClose={onClose}>
-      <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView
+        ref={rootRef}
+        style={{ flex: 1, backgroundColor: colors.bg, paddingBottom: kb }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <View style={[styles.sheetHeader, Platform.OS === 'android' && { paddingTop: insets.top + 8 }]}>
           <Pressable onPress={onClose} hitSlop={12} style={{ minWidth: 60 }}>
             <Text style={{ fontSize: 22, color: colors.textMuted }}>✕</Text>
@@ -240,10 +280,13 @@ export const Sheet = ({ visible, onClose, title, children, actionLabel, onAction
         </View>
         {scroll ? (
           <ScrollView
+            ref={scrollRef}
             contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 40 }}
             keyboardShouldPersistTaps='handled'
           >
-            {children}
+            <View ref={contentRef} collapsable={false}>
+              {children}
+            </View>
           </ScrollView>
         ) : (
           <View style={{ flex: 1, paddingBottom: insets.bottom }}>{children}</View>
