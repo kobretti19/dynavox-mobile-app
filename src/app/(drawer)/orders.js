@@ -7,8 +7,12 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useApi } from '../../utils/useApi';
 import { formatDate, formatMoney, includesQuery } from '../../utils/format';
 import { orderStatusColor } from '../../utils/status';
-import { Badge, Button, Card, Empty, ErrorBox, Fab, Input, Loading, Row, SearchBar, Select, Sheet, StatTile, showError, styles } from '../../components/ui';
+import { Badge, Button, Card, Empty, ErrorBox, Fab, Input, Loading, Row, Select, Sheet, StatTile, confirm, showError, styles } from '../../components/ui';
 import { colors } from '../../theme';
+import PartForm from '../../components/PartForm';
+import ScanButton from '../../components/ScanButton';
+import ScanSearchBar from '../../components/ScanSearchBar';
+import { findPartByCode } from '../../utils/codes';
 
 const STATUSES = ['draft', 'pending', 'ordered', 'partial', 'delivered', 'completed', 'cancelled'];
 
@@ -23,6 +27,7 @@ export default function Orders() {
   const [form, setForm] = useState({ order_number: '', notes: '', items: [] });
   const [item, setItem] = useState({ part_id: null, quantity: '1', unit_price: '', notes: '' });
   const [saving, setSaving] = useState(false);
+  const [newPart, setNewPart] = useState(null); // PartForm prefill for an unknown scanned code
 
   const list = orders.data || [];
   const filtered = useMemo(
@@ -74,6 +79,25 @@ export default function Orders() {
     setItem({ part_id: null, quantity: '1', unit_price: '', notes: '' });
   };
 
+  const pickPart = (part) => setItem({ part_id: part.id, quantity: '1', unit_price: String(part.purchase_price || ''), notes: '' });
+
+  // Scanned article: select it (or count it up when it's already on the
+  // order); unknown codes can be created as a new part right away.
+  const scanPart = async (code) => {
+    const part = findPartByCode(parts, code);
+    if (part) {
+      if (form.items.some((i) => i.part_id === part.id)) {
+        setForm((f) => ({ ...f, items: f.items.map((i) => (i.part_id === part.id ? { ...i, quantity: i.quantity + 1 } : i)) }));
+      } else {
+        pickPart(part);
+      }
+      return;
+    }
+    if (await confirm(t('mobile.scanPartNotFound', { code }), t('mobile.scanCreatePartQuestion'), { confirmText: t('mobile.scanCreatePart'), cancelText: t('common.cancel'), destructive: false })) {
+      setNewPart({ sku: code });
+    }
+  };
+
   const create = async () => {
     if (form.items.length === 0) {
       showError(t('common.error'), t('orders.alertAddOneItem'));
@@ -107,7 +131,7 @@ export default function Orders() {
 
   return (
     <View style={{ flex: 1 }}>
-      <SearchBar
+      <ScanSearchBar
         value={q}
         onChangeText={setQ}
         placeholder={t('nav.searchOrders')}
@@ -189,22 +213,27 @@ export default function Orders() {
           </Row>
         ))}
         <View style={{ backgroundColor: colors.grayBg, borderRadius: 10, padding: 10, marginTop: 10, marginBottom: 14 }}>
-          <Select
-            label={t('orders.part')}
-            value={item.part_id}
-            options={parts
-              .filter((p) => !p.is_nla)
-              .map((p) => ({
-                value: p.id,
-                label: `${p.name}${p.color ? ` (${p.color})` : ''}`,
-                sublabel: [`${t('orders.stockLabel')} ${p.quantity}`, p.sku || t('orders.noSku'), p.supplier].filter(Boolean).join(' · '),
-              }))}
-            onChange={(v) => {
-              const p = parts.find((x) => x.id === v);
-              setItem({ ...item, part_id: v, unit_price: p ? String(p.purchase_price || '') : '' });
-            }}
-            placeholder={t('orders.searchPartPlaceholder')}
-          />
+          <Row style={{ alignItems: 'flex-end' }}>
+            <View style={{ flex: 1 }}>
+              <Select
+                label={t('orders.part')}
+                value={item.part_id}
+                options={parts
+                  .filter((p) => !p.is_nla)
+                  .map((p) => ({
+                    value: p.id,
+                    label: `${p.name}${p.color ? ` (${p.color})` : ''}`,
+                    sublabel: [`${t('orders.stockLabel')} ${p.quantity}`, p.sku || t('orders.noSku'), p.supplier].filter(Boolean).join(' · '),
+                  }))}
+                onChange={(v) => {
+                  const p = parts.find((x) => x.id === v);
+                  setItem({ ...item, part_id: v, unit_price: p ? String(p.purchase_price || '') : '' });
+                }}
+                placeholder={t('orders.searchPartPlaceholder')}
+              />
+            </View>
+            <ScanButton style={{ height: 44, marginBottom: 14 }} onScanned={scanPart} />
+          </Row>
           <Row style={{ alignItems: 'flex-start' }}>
             <View style={{ flex: 1 }}>
               <Input label={t('orders.qty')} value={item.quantity} onChangeText={(v) => setItem({ ...item, quantity: v.replace(/[^0-9]/g, '') })} keyboardType='number-pad' />
@@ -219,6 +248,24 @@ export default function Orders() {
         <Text style={{ fontWeight: '800', fontSize: 16, textAlign: 'right' }}>
           {t('orders.totalColon')} {formatMoney(total)}
         </Text>
+        <PartForm
+          visible={!!newPart}
+          parts={parts}
+          initial={newPart}
+          onClose={() => setNewPart(null)}
+          onSaved={async (partId) => {
+            setNewPart(null);
+            try {
+              const res = await partsAPI.getAll();
+              const list = res.data.data || [];
+              setParts(list);
+              const part = list.find((p) => p.id === partId);
+              if (part) pickPart(part);
+            } catch {
+              // keep the form as it is
+            }
+          }}
+        />
       </Sheet>
     </View>
   );

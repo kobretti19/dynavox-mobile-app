@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { View } from 'react-native';
 import { partsAPI } from '../api';
 import { errorMessage } from '../api/client';
 import { useLanguage } from '../context/LanguageContext';
-import { Input, NumberInput, Select, Sheet, SwitchRow, showError } from './ui';
+import { Input, NumberInput, Row, Select, Sheet, SwitchRow, showError } from './ui';
+import ScanButton from './ScanButton';
 
 const empty = {
   name: '',
@@ -19,12 +21,15 @@ const empty = {
   is_nla: false,
 };
 
+const scanStyle = { height: 44, marginBottom: 14 };
+
 const uniqOptions = (parts, key) =>
   [...new Set((parts || []).map((p) => p[key]).filter(Boolean))].sort().map((v) => ({ value: v, label: v }));
 
 // Create (part = null) or edit a part. `parts` feeds the color/category/
 // supplier suggestions, like the web form's datalists.
-const PartForm = ({ visible, part, parts, onClose, onSaved }) => {
+// `initial` prefills a new part (e.g. the scanned order number).
+const PartForm = ({ visible, part, parts, initial, onClose, onSaved }) => {
   const { t } = useLanguage();
   const [form, setForm] = useState(empty);
   const [saving, setSaving] = useState(false);
@@ -47,9 +52,9 @@ const PartForm = ({ visible, part, parts, onClose, onSaved }) => {
             min_stock_level: part.min_stock_level ?? '',
             is_nla: !!part.is_nla,
           }
-        : empty,
+        : { ...empty, ...(initial || {}) },
     );
-  }, [visible, part]);
+  }, [visible, part, initial]);
 
   const set = (key) => (value) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -92,11 +97,21 @@ const PartForm = ({ visible, part, parts, onClose, onSaved }) => {
       actionLoading={saving}
     >
       <Input label={t('parts.partName')} value={form.name} onChangeText={set('name')} placeholder={t('parts.enterPartName')} />
-      <Input label={t('parts.skuOrderNumber')} value={form.sku} onChangeText={set('sku')} placeholder={t('parts.skuPlaceholder')} autoCapitalize='characters' />
+      <Row style={{ alignItems: 'flex-end' }}>
+        <View style={{ flex: 1 }}>
+          <Input label={t('parts.skuOrderNumber')} value={form.sku} onChangeText={set('sku')} placeholder={t('parts.skuPlaceholder')} autoCapitalize='characters' />
+        </View>
+        <ScanButton style={scanStyle} onScanned={set('sku')} />
+      </Row>
       <Select label={t('parts.color')} value={form.color} options={uniqOptions(parts, 'color')} onChange={(v) => set('color')(v || '')} allowCustom allowClear placeholder={t('parts.colorPlaceholder')} />
       <Select label={t('parts.category')} value={form.category} options={uniqOptions(parts, 'category')} onChange={(v) => set('category')(v || '')} allowCustom allowClear placeholder={t('parts.categoryPlaceholder')} />
       <Select label={t('parts.supplier')} value={form.supplier} options={uniqOptions(parts, 'supplier')} onChange={(v) => set('supplier')(v || '')} allowCustom allowClear placeholder={t('parts.supplierPlaceholder')} />
-      <Input label={t('parts.articleId')} value={form.article_id} onChangeText={set('article_id')} placeholder={t('parts.articleIdPlaceholder')} />
+      <Row style={{ alignItems: 'flex-end' }}>
+        <View style={{ flex: 1 }}>
+          <Input label={t('parts.articleId')} value={form.article_id} onChangeText={set('article_id')} placeholder={t('parts.articleIdPlaceholder')} />
+        </View>
+        <ScanButton style={scanStyle} onScanned={set('article_id')} />
+      </Row>
       <Input label={t('parts.description')} value={form.description} onChangeText={set('description')} multiline placeholder={t('parts.enterDescription')} />
       <NumberInput label={t('parts.purchasePrice')} value={form.purchase_price} onChange={set('purchase_price')} />
       <NumberInput label={t('parts.sellingPrice')} value={form.selling_price} onChange={set('selling_price')} />

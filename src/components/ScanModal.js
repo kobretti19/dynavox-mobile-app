@@ -176,6 +176,20 @@ const ScanModal = ({ visible, onClose, onScanned, initialMode = 'text' }) => {
                 {reading ? <ActivityIndicator color='#FFF' /> : <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#FFF' }} />}
               </Pressable>
             ) : null}
+            <Row>
+              <TextInput
+                value={manual}
+                onChangeText={setManual}
+                placeholder={t('mobile.scanTypeManually')}
+                placeholderTextColor='#AAA'
+                autoCapitalize='characters'
+                autoCorrect={false}
+                returnKeyType='done'
+                onSubmitEditing={() => finish(manual)}
+                style={[styles.input, { flex: 1 }]}
+              />
+              <Button title='OK' onPress={() => finish(manual)} disabled={!manual.trim()} />
+            </Row>
             <Segmented
               options={[
                 { value: 'text', label: `🔤 ${t('mobile.modeText')}` },

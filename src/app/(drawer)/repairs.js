@@ -17,7 +17,6 @@ import {
   Input,
   Loading,
   Row,
-  SearchBar,
   Segmented,
   Select,
   Sheet,
@@ -27,6 +26,7 @@ import {
 } from '../../components/ui';
 import DateField from '../../components/DateField';
 import ScanModal from '../../components/ScanModal';
+import ScanSearchBar from '../../components/ScanSearchBar';
 import LookupField from '../../components/LookupField';
 import { colors, tone } from '../../theme';
 
@@ -167,9 +167,10 @@ export default function Repairs() {
 
   return (
     <View style={{ flex: 1 }}>
-      <SearchBar
+      <ScanSearchBar
         value={q}
         onChangeText={setQ}
+        scanMode='text'
         placeholder={t('nav.searchRepairs')}
         right={
           <Button

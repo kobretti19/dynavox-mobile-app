@@ -6,8 +6,9 @@ import { errorMessage } from '../../api/client';
 import { useLanguage } from '../../context/LanguageContext';
 import { useApi } from '../../utils/useApi';
 import { formatDateTime, includesQuery } from '../../utils/format';
-import { Badge, Card, Empty, Fab, Input, Loading, Row, SearchBar, Segmented, Select, Sheet, StatTile, showError, styles } from '../../components/ui';
+import { Badge, Card, Empty, Fab, Input, Loading, Row, Segmented, Select, Sheet, StatTile, showError, styles } from '../../components/ui';
 import { colors } from '../../theme';
+import ScanSearchBar from '../../components/ScanSearchBar';
 
 const movementColor = { in: colors.green, out: colors.red, adjustment: colors.blue };
 
@@ -89,7 +90,7 @@ export default function StockMovements() {
           onChange={setTab}
         />
       </View>
-      <SearchBar value={q} onChangeText={setQ} placeholder={t('nav.searchStockMovements')} />
+      <ScanSearchBar value={q} onChangeText={setQ} placeholder={t('nav.searchStockMovements')} />
       {current.loading ? (
         <Loading />
       ) : (

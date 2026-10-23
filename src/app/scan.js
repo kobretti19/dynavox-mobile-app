@@ -4,7 +4,8 @@ import { router } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { devicesAPI, partsAPI, repairsAPI } from '../api';
+import { devicesAPI, equipmentAPI, equipmentTemplatesAPI, partsAPI, repairsAPI } from '../api';
+import { cleanCode, codeMatches, findPartByCode } from '../utils/codes';
 import { useLanguage } from '../context/LanguageContext';
 import { buildReportId, partStatus, repairStatusColor } from '../utils/status';
 import { Badge, Button, Card, Row, styles } from '../components/ui';
@@ -14,18 +15,37 @@ import ScanModal from '../components/ScanModal';
 const norm = (v) => String(v || '').trim().toLowerCase();
 
 // Looks a scanned/typed code up in parts (SKU, article id, name), devices
-// (serial number) and repair tickets (displayed ticket number).
+// and equipment (serial number), components / templates (article id) and
+// repair tickets (displayed ticket number).
 const lookup = async (code) => {
   const c = norm(code);
-  const [partsRes, devicesRes, repairsRes] = await Promise.allSettled([partsAPI.getAll(), devicesAPI.getAll(), repairsAPI.getAll()]);
-  const parts = partsRes.status === 'fulfilled' ? partsRes.value.data.data || [] : [];
-  const devices = devicesRes.status === 'fulfilled' ? devicesRes.value.data.data || [] : [];
-  const repairs = repairsRes.status === 'fulfilled' ? repairsRes.value.data.data || [] : [];
+  const cc = cleanCode(code);
+  const [partsRes, devicesRes, repairsRes, equipmentRes, templatesRes] = await Promise.allSettled([
+    partsAPI.getAll(),
+    devicesAPI.getAll(),
+    repairsAPI.getAll(),
+    equipmentAPI.getAll(),
+    equipmentTemplatesAPI.getAll(),
+  ]);
+  const ok = (r) => (r.status === 'fulfilled' ? r.value.data.data || [] : []);
+  const parts = ok(partsRes);
+  const devices = ok(devicesRes);
+  const repairs = ok(repairsRes);
+  const equipment = ok(equipmentRes);
+  const templates = ok(templatesRes);
 
-  const exactParts = parts.filter((p) => norm(p.sku) === c || norm(p.article_id) === c);
+  const exactParts = parts.filter((p) => codeMatches(code, p.sku, p.article_id));
+  const contained = exactParts.length ? null : findPartByCode(parts, code);
   const fuzzyParts = exactParts.length
     ? []
-    : parts.filter((p) => c.length >= 3 && [p.sku, p.article_id, p.name].some((f) => norm(f).includes(c))).slice(0, 10);
+    : contained
+      ? [contained]
+      : parts.filter((p) => c.length >= 3 && [p.sku, p.article_id, p.name].some((f) => norm(f).includes(c))).slice(0, 10);
+  const exactEquipment = equipment.filter((e) => codeMatches(code, e.serial_number, e.article_id));
+  const fuzzyEquipment = exactEquipment.length
+    ? []
+    : equipment.filter((e) => cc.length >= 4 && cleanCode(e.serial_number).includes(cc)).slice(0, 10);
+  const matchTemplates = templates.filter((tp) => codeMatches(code, tp.article_id));
   const exactDevices = devices.filter((d) => norm(d.serial_number) === c);
   const fuzzyDevices = exactDevices.length
     ? []
@@ -36,6 +56,8 @@ const lookup = async (code) => {
     parts: [...exactParts, ...fuzzyParts],
     devices: [...exactDevices, ...fuzzyDevices],
     repairs: matchRepairs,
+    equipment: [...exactEquipment, ...fuzzyEquipment],
+    templates: matchTemplates,
     exactDevice: exactDevices.length > 0,
   };
 };
@@ -62,10 +84,12 @@ export default function Scan() {
       const r = await lookup(v);
       setResults(r);
       // Exactly one hit -> go straight there.
-      const total = r.parts.length + r.devices.length + r.repairs.length;
+      const total = r.parts.length + r.devices.length + r.repairs.length + r.equipment.length + r.templates.length;
       if (total === 1) {
         if (r.parts.length) router.replace(`/parts/${r.parts[0].id}`);
         else if (r.devices.length) router.replace(`/devices/${r.devices[0].id}`);
+        else if (r.equipment.length) router.replace(`/equipment/${r.equipment[0].id}`);
+        else if (r.templates.length) router.replace(`/templates/${r.templates[0].id}`);
         else router.replace(`/repairs/${r.repairs[0].id}`);
       }
     } finally {
@@ -184,7 +208,21 @@ export default function Scan() {
                   <Text style={styles.small}>SN: {d.serial_number}</Text>
                 </Card>
               ))}
-              {results.parts.length + results.devices.length + results.repairs.length === 0 ? (
+              {results.equipment.map((e) => (
+                <Card key={`e${e.id}`} onPress={() => router.replace(`/equipment/${e.id}`)}>
+                  <Text style={styles.small}>🛠 {t('mobile.scanEquipment')}</Text>
+                  <Text style={styles.title}>{[e.brand, e.model].filter(Boolean).join(' ') || '-'}</Text>
+                  <Text style={styles.small}>{[e.serial_number ? `SN: ${e.serial_number}` : null, e.article_id].filter(Boolean).join(' · ')}</Text>
+                </Card>
+              ))}
+              {results.templates.map((tp) => (
+                <Card key={`t${tp.id}`} onPress={() => router.replace(`/templates/${tp.id}`)}>
+                  <Text style={styles.small}>🧩 {t('mobile.scanTemplate')}</Text>
+                  <Text style={styles.title}>{tp.name || tp.model || '-'}</Text>
+                  <Text style={styles.small}>{[tp.article_id, tp.brand].filter(Boolean).join(' · ')}</Text>
+                </Card>
+              ))}
+              {results.parts.length + results.devices.length + results.repairs.length + results.equipment.length + results.templates.length === 0 ? (
                 <Text style={[styles.subtitle, { marginBottom: 16 }]}>{t('mobile.scanNothingFound')}</Text>
               ) : null}
               {!results.exactDevice ? (

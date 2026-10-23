@@ -5,8 +5,10 @@ import { partsAPI } from '../../api';
 import { useLanguage } from '../../context/LanguageContext';
 import { useApi } from '../../utils/useApi';
 import { includesQuery, formatMoney } from '../../utils/format';
-import { Badge, Button, Card, Empty, ErrorBox, Fab, Loading, Row, SearchBar, Select, Sheet, StatTile, styles } from '../../components/ui';
+import { Badge, Button, Card, Empty, ErrorBox, Fab, Loading, Row, Select, confirm, Sheet, StatTile, styles } from '../../components/ui';
 import PartForm from '../../components/PartForm';
+import ScanSearchBar from '../../components/ScanSearchBar';
+import { findPartByCode } from '../../utils/codes';
 import { colors } from '../../theme';
 import { partStatus } from '../../utils/status';
 
@@ -20,6 +22,7 @@ export default function Parts() {
   const [filters, setFilters] = useState({ category: null, color: null, supplier: null, availability: null });
   const [showFilters, setShowFilters] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
+  const [createInitial, setCreateInitial] = useState(null);
 
   const filtered = useMemo(
     () =>
@@ -38,14 +41,29 @@ export default function Parts() {
   const totalValue = parts.reduce((s, p) => s + Number(p.quantity || 0) * Number(p.purchase_price || 0), 0);
   const activeFilters = Object.values(filters).filter(Boolean).length;
 
+  // Scanned code: open the part, or offer to create one with that number.
+  const onScanned = async (code) => {
+    const part = findPartByCode(parts, code);
+    if (part) {
+      router.push(`/parts/${part.id}`);
+      return;
+    }
+    setQ(code);
+    if (await confirm(t('mobile.scanPartNotFound', { code }), t('mobile.scanCreatePartQuestion'), { confirmText: t('mobile.scanCreatePart'), cancelText: t('common.cancel'), destructive: false })) {
+      setCreateInitial({ sku: code });
+      setShowCreate(true);
+    }
+  };
+
   if (loading) return <Loading />;
   if (error && !data) return <ErrorBox message={t('parts.errorLoading', { error })} onRetry={refresh} />;
 
   return (
     <View style={{ flex: 1 }}>
-      <SearchBar
+      <ScanSearchBar
         value={q}
         onChangeText={setQ}
+        onScanned={onScanned}
         placeholder={t('nav.searchParts')}
         right={
           <Button
@@ -108,7 +126,12 @@ export default function Parts() {
           );
         }}
       />
-      <Fab onPress={() => setShowCreate(true)} />
+      <Fab
+        onPress={() => {
+          setCreateInitial(null);
+          setShowCreate(true);
+        }}
+      />
 
       <Sheet visible={showFilters} onClose={() => setShowFilters(false)} title={t('mobile.filters')}>
         <Select
@@ -161,6 +184,7 @@ export default function Parts() {
       <PartForm
         visible={showCreate}
         parts={parts}
+        initial={createInitial}
         onClose={() => setShowCreate(false)}
         onSaved={(id) => {
           setShowCreate(false);

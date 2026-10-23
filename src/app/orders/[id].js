@@ -8,6 +8,10 @@ import { formatDateTime, formatMoney } from '../../utils/format';
 import { CLOSED_ITEM_STATUSES, orderStatusColor } from '../../utils/status';
 import { Badge, Button, Card, ErrorBox, Input, Loading, Row, SectionTitle, Segmented, Select, Sheet, confirm, showError, styles } from '../../components/ui';
 import { colors } from '../../theme';
+import PartForm from '../../components/PartForm';
+import ScanButton from '../../components/ScanButton';
+import ScanModal from '../../components/ScanModal';
+import { findPartByCode } from '../../utils/codes';
 
 const ITEM_STATUSES = ['pending', 'partial', 'delivered', 'backorder', 'cancelled', 'nla', 'closed'];
 
@@ -25,6 +29,9 @@ export default function OrderDetail() {
   const [delivery, setDelivery] = useState(null);
   const [itemEdit, setItemEdit] = useState(null);
   const [transfer, setTransfer] = useState(null);
+  const [newPart, setNewPart] = useState(null); // PartForm prefill for an unknown scanned code
+  const [deliveryScan, setDeliveryScan] = useState(false);
+  const [received, setReceived] = useState(null); // { idx, value } -- quantity prompt after a scan
 
   const load = useCallback(async () => {
     try {
@@ -87,6 +94,8 @@ export default function OrderDetail() {
         const already = i.quantity_delivered || 0;
         return {
           id: i.id,
+          part_id: i.part_id,
+          sku: i.sku,
           part_name: i.part_name,
           ordered,
           already,
@@ -116,6 +125,43 @@ export default function OrderDetail() {
   };
 
   const setDeliveryRow = (idx, patch) => setDelivery((d) => ({ ...d, items: d.items.map((r, i) => (i === idx ? { ...r, ...patch } : r)) }));
+
+  // Scanned article while receiving: ask how many arrived and add that to
+  // the row's "receiving" quantity.
+  const onDeliveryScanned = (code) => {
+    setDeliveryScan(false);
+    const rows = delivery.items.map((r, idx) => ({ ...r, idx, article_id: parts.find((p) => p.id === r.part_id)?.article_id }));
+    const row = findPartByCode(rows, code);
+    setTimeout(() => {
+      if (!row) {
+        showError(t('common.error'), t('mobile.scanNotInOrder', { code }));
+        return;
+      }
+      const open = Math.max(0, row.ordered - row.already - (parseInt(row.receiving, 10) || 0));
+      setReceived({ idx: row.idx, value: String(open || 1) });
+    }, 350);
+  };
+
+  const applyReceived = (scanNext) => {
+    const qty = parseInt(received.value, 10) || 0;
+    const row = delivery.items[received.idx];
+    setDeliveryRow(received.idx, { receiving: String((parseInt(row.receiving, 10) || 0) + qty), status: 'partial' });
+    setReceived(null);
+    if (scanNext) setTimeout(() => setDeliveryScan(true), 350);
+  };
+
+  const pickNewItemPart = (part) => setNewItem({ part_id: part.id, quantity: '1', unit_price: String(part.purchase_price || ''), notes: '' });
+
+  const scanNewItem = async (code) => {
+    const part = findPartByCode(parts, code);
+    if (part) {
+      pickNewItemPart(part);
+      return;
+    }
+    if (await confirm(t('mobile.scanPartNotFound', { code }), t('mobile.scanCreatePartQuestion'), { confirmText: t('mobile.scanCreatePart'), cancelText: t('common.cancel'), destructive: false })) {
+      setNewPart({ sku: code });
+    }
+  };
 
   const complete = async () => {
     if (!(await confirm(t('orders.completeOrder'), t('orders.confirmCompleteOrder', { order: order.order_number || `#${order.id}` }), { confirmText: t('common.confirm'), cancelText: t('common.cancel'), destructive: false }))) return;
@@ -235,16 +281,21 @@ export default function OrderDetail() {
         {!finished ? (
           <Card>
             <SectionTitle style={{ marginTop: 0 }}>{t('orders.addShort')}</SectionTitle>
-            <Select
-              label={t('orders.part')}
-              value={newItem.part_id}
-              options={parts.filter((p) => !p.is_nla).map((p) => ({ value: p.id, label: `${p.name}${p.color ? ` (${p.color})` : ''}`, sublabel: [`${t('orders.stockLabel')} ${p.quantity}`, p.sku, p.supplier].filter(Boolean).join(' · ') }))}
-              onChange={(v) => {
-                const p = parts.find((x) => x.id === v);
-                setNewItem({ ...newItem, part_id: v, unit_price: p ? String(p.purchase_price || '') : '' });
-              }}
-              placeholder={t('orders.addPartPlaceholder')}
-            />
+            <Row style={{ alignItems: 'flex-end' }}>
+              <View style={{ flex: 1 }}>
+                <Select
+                  label={t('orders.part')}
+                  value={newItem.part_id}
+                  options={parts.filter((p) => !p.is_nla).map((p) => ({ value: p.id, label: `${p.name}${p.color ? ` (${p.color})` : ''}`, sublabel: [`${t('orders.stockLabel')} ${p.quantity}`, p.sku, p.supplier].filter(Boolean).join(' · ') }))}
+                  onChange={(v) => {
+                    const p = parts.find((x) => x.id === v);
+                    setNewItem({ ...newItem, part_id: v, unit_price: p ? String(p.purchase_price || '') : '' });
+                  }}
+                  placeholder={t('orders.addPartPlaceholder')}
+                />
+              </View>
+              <ScanButton style={{ height: 44, marginBottom: 14 }} onScanned={scanNewItem} />
+            </Row>
             <Row style={{ alignItems: 'flex-start' }}>
               <View style={{ flex: 1 }}>
                 <Input label={t('orders.qty')} value={newItem.quantity} onChangeText={(v) => setNewItem({ ...newItem, quantity: v.replace(/[^0-9]/g, '') })} keyboardType='number-pad' />
@@ -257,10 +308,29 @@ export default function OrderDetail() {
             <Button title={t('orders.addItemButton')} variant='secondary' onPress={addItem} disabled={!newItem.part_id || busy} />
           </Card>
         ) : null}
+        <PartForm
+          visible={!!newPart}
+          parts={parts}
+          initial={newPart}
+          onClose={() => setNewPart(null)}
+          onSaved={async (partId) => {
+            setNewPart(null);
+            try {
+              const res = await partsAPI.getAll();
+              const list = res.data.data || [];
+              setParts(list);
+              const part = list.find((p) => p.id === partId);
+              if (part) pickNewItemPart(part);
+            } catch {
+              // keep the form as it is
+            }
+          }}
+        />
       </ScrollView>
 
       {/* Receive delivery */}
       <Sheet visible={!!delivery} onClose={() => setDelivery(null)} title={t('orders.receiveDeliveryTitle', { order: order.order_number || `#${order.id}` })} actionLabel={t('common.save')} onAction={submitDelivery} actionLoading={busy}>
+        <Button title={t('mobile.scanProduct')} icon='📷' variant='blue' style={{ marginBottom: 12 }} onPress={() => setDeliveryScan(true)} />
         {(delivery?.items || []).map((r, idx) => {
           const closed = CLOSED_ITEM_STATUSES.includes(r.status);
           const remaining = Math.max(0, r.ordered - r.already);
@@ -295,6 +365,30 @@ export default function OrderDetail() {
           );
         })}
         <Input label={t('common.notes')} value={delivery?.notes || ''} onChangeText={(v) => setDelivery({ ...delivery, notes: v })} placeholder={t('orders.deliveryNotesPlaceholder')} multiline />
+        <ScanModal visible={deliveryScan} initialMode='barcode' onClose={() => setDeliveryScan(false)} onScanned={onDeliveryScanned} />
+        <Sheet visible={!!received} onClose={() => setReceived(null)} title={received ? delivery?.items[received.idx]?.part_name : ''} actionLabel='OK' onAction={() => applyReceived(false)}>
+          {received && delivery?.items[received.idx] ? (
+            <>
+              <Text style={[styles.subtitle, { marginBottom: 12 }]}>
+                {t('mobile.receiveSummary', {
+                  ordered: delivery.items[received.idx].ordered,
+                  already: delivery.items[received.idx].already,
+                  now: parseInt(delivery.items[received.idx].receiving, 10) || 0,
+                })}
+              </Text>
+              <Input
+                label={t('mobile.receivedQty')}
+                value={received.value}
+                onChangeText={(v) => setReceived({ ...received, value: v.replace(/[^0-9]/g, '') })}
+                keyboardType='number-pad'
+                autoFocus
+                selectTextOnFocus
+              />
+              <Button title='OK' onPress={() => applyReceived(false)} disabled={!received.value} />
+              <Button title={t('mobile.scanNext')} icon='📷' variant='secondary' style={{ marginTop: 10 }} onPress={() => applyReceived(true)} disabled={!received.value} />
+            </>
+          ) : null}
+        </Sheet>
       </Sheet>
 
       {/* Edit one item */}

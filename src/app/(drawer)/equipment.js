@@ -5,8 +5,9 @@ import { equipmentAPI } from '../../api';
 import { useLanguage } from '../../context/LanguageContext';
 import { useApi } from '../../utils/useApi';
 import { formatDate, includesQuery } from '../../utils/format';
-import { Badge, Button, Card, Empty, ErrorBox, Fab, Loading, Row, SearchBar, StatTile, styles } from '../../components/ui';
+import { Badge, Button, Card, Empty, ErrorBox, Fab, Loading, Row, StatTile, styles } from '../../components/ui';
 import ProduceSheet from '../../components/ProduceSheet';
+import ScanSearchBar from '../../components/ScanSearchBar';
 import { colors } from '../../theme';
 
 // Monday 00:00 of the week containing d.
@@ -60,9 +61,10 @@ export default function Equipment() {
 
   return (
     <View style={{ flex: 1 }}>
-      <SearchBar
+      <ScanSearchBar
         value={q}
         onChangeText={setQ}
+        scanMode='text'
         placeholder={t('nav.searchEquipment')}
         right={<Button title='📊' small variant='secondary' style={{ height: 42 }} onPress={() => router.push('/equipment/report')} />}
       />

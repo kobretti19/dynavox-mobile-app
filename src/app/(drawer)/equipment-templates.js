@@ -5,9 +5,10 @@ import { equipmentTemplatesAPI } from '../../api';
 import { useLanguage } from '../../context/LanguageContext';
 import { useApi } from '../../utils/useApi';
 import { includesQuery } from '../../utils/format';
-import { Badge, Button, Card, Empty, ErrorBox, Fab, Loading, Row, SearchBar, Segmented, styles } from '../../components/ui';
+import { Badge, Button, Card, Empty, ErrorBox, Fab, Loading, Row, Segmented, styles } from '../../components/ui';
 import TemplateForm from '../../components/TemplateForm';
 import ProduceSheet from '../../components/ProduceSheet';
+import ScanSearchBar from '../../components/ScanSearchBar';
 
 export default function EquipmentTemplates() {
   const { t } = useLanguage();
@@ -32,7 +33,7 @@ export default function EquipmentTemplates() {
 
   return (
     <View style={{ flex: 1 }}>
-      <SearchBar value={q} onChangeText={setQ} placeholder={t('nav.searchTemplates')} />
+      <ScanSearchBar value={q} onChangeText={setQ} placeholder={t('nav.searchTemplates')} />
       <View style={{ paddingHorizontal: 12, paddingBottom: 6 }}>
         <Segmented
           options={[

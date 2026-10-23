@@ -6,8 +6,9 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useApi } from '../../utils/useApi';
 import { includesQuery } from '../../utils/format';
 import { deviceFields } from '../../utils/entityFields';
-import { Badge, Button, Card, Empty, ErrorBox, Fab, Loading, Row, SearchBar, styles } from '../../components/ui';
+import { Badge, Card, Empty, ErrorBox, Fab, Loading, Row, styles } from '../../components/ui';
 import EntityForm from '../../components/EntityForm';
+import ScanSearchBar from '../../components/ScanSearchBar';
 
 export default function Devices() {
   const { t } = useLanguage();
@@ -21,12 +22,7 @@ export default function Devices() {
 
   return (
     <View style={{ flex: 1 }}>
-      <SearchBar
-        value={q}
-        onChangeText={setQ}
-        placeholder={t('nav.searchDevices')}
-        right={<Button title='📷' small variant='secondary' style={{ height: 42 }} onPress={() => router.push('/scan')} />}
-      />
+      <ScanSearchBar value={q} onChangeText={setQ} scanMode='text' placeholder={t('nav.searchDevices')} />
       <FlatList
         data={list}
         keyExtractor={(d) => String(d.id)}

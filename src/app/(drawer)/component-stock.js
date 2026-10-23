@@ -6,9 +6,10 @@ import { errorMessage } from '../../api/client';
 import { useLanguage } from '../../context/LanguageContext';
 import { useApi } from '../../utils/useApi';
 import { formatDateTime, includesQuery } from '../../utils/format';
-import { Button, Card, Empty, ErrorBox, Input, Loading, Row, SearchBar, Sheet, showError, styles } from '../../components/ui';
+import { Button, Card, Empty, ErrorBox, Input, Loading, Row, Sheet, showError, styles } from '../../components/ui';
 import ProduceSheet from '../../components/ProduceSheet';
 import { colors } from '../../theme';
+import ScanSearchBar from '../../components/ScanSearchBar';
 
 const typeColor = { produced: colors.green, consumed: colors.red, returned: colors.blue, manual: colors.orange };
 
@@ -54,7 +55,7 @@ export default function ComponentStock() {
 
   return (
     <View style={{ flex: 1 }}>
-      <SearchBar value={q} onChangeText={setQ} placeholder={t('nav.searchComponentStock')} />
+      <ScanSearchBar value={q} onChangeText={setQ} placeholder={t('nav.searchComponentStock')} />
       <FlatList
         data={list}
         keyExtractor={(c) => String(c.template_id)}
