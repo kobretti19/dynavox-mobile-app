@@ -216,23 +216,35 @@ export const Row = ({ children, style, gap = 8 }) => (
 
 // Full-screen form/sheet with a header (close, title, optional action).
 // On Android the app is edge-to-edge, so the window doesn't shrink for the
-// keyboard: measure how much of the sheet it covers, pad by that and scroll
-// the focused input into view.
-const useAndroidKeyboard = (visible, rootRef, scrollRef, contentRef) => {
+// keyboard: the top-most open sheet pads itself by the part the keyboard
+// covers and scrolls the focused input into view. Only window coordinates
+// are used, since sheets stacked on top of each other live in separate
+// native windows.
+const openSheets = [];
+const useAndroidKeyboard = (visible, rootRef, scrollRef, scrollY) => {
   const [overlap, setOverlap] = useState(0);
   useEffect(() => {
     if (Platform.OS !== 'android' || !visible) return undefined;
+    const id = {};
+    openSheets.push(id);
+    const isTop = () => openSheets[openSheets.length - 1] === id;
     const show = Keyboard.addListener('keyboardDidShow', (e) => {
-      rootRef.current?.measureInWindow((x, y, w, h) => {
-        setOverlap(Math.max(0, y + h - e.endCoordinates.screenY));
+      if (!isTop() || !rootRef.current) return;
+      const kbTop = e.endCoordinates.screenY;
+      rootRef.current.measureInWindow((x, y, w, h) => {
+        setOverlap(Math.max(0, y + h - kbTop));
         setTimeout(() => {
-          const input = TextInput.State.currentlyFocusedInput?.();
-          if (!input || !contentRef.current || !scrollRef.current) return;
-          input.measureLayout(
-            contentRef.current,
-            (ix, iy) => scrollRef.current?.scrollTo({ y: Math.max(0, iy - 40), animated: true }),
-            () => {},
-          );
+          try {
+            const input = TextInput.State.currentlyFocusedInput?.();
+            if (!input?.measureInWindow || !scrollRef.current) return;
+            input.measureInWindow((ix, iy, iw, ih) => {
+              // Input bottom should end up a bit above the keyboard.
+              const hidden = iy + Math.min(ih, 160) + 24 - kbTop;
+              if (hidden > 0) scrollRef.current?.scrollTo({ y: scrollY.current + hidden, animated: true });
+            });
+          } catch {
+            // best effort only
+          }
         }, 150);
       });
     });
@@ -240,9 +252,11 @@ const useAndroidKeyboard = (visible, rootRef, scrollRef, contentRef) => {
     return () => {
       show.remove();
       hide.remove();
+      const i = openSheets.indexOf(id);
+      if (i >= 0) openSheets.splice(i, 1);
       setOverlap(0);
     };
-  }, [visible, rootRef, scrollRef, contentRef]);
+  }, [visible, rootRef, scrollRef, scrollY]);
   return overlap;
 };
 
@@ -250,8 +264,8 @@ export const Sheet = ({ visible, onClose, title, children, actionLabel, onAction
   const insets = useSafeAreaInsets();
   const rootRef = useRef(null);
   const scrollRef = useRef(null);
-  const contentRef = useRef(null);
-  const kb = useAndroidKeyboard(visible, rootRef, scrollRef, contentRef);
+  const scrollY = useRef(0);
+  const kb = useAndroidKeyboard(visible, rootRef, scrollRef, scrollY);
   return (
     <Modal visible={visible} animationType='slide' presentationStyle='pageSheet' onRequestClose={onClose}>
       <KeyboardAvoidingView
@@ -283,10 +297,12 @@ export const Sheet = ({ visible, onClose, title, children, actionLabel, onAction
             ref={scrollRef}
             contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 40 }}
             keyboardShouldPersistTaps='handled'
+            onScroll={(e) => {
+              scrollY.current = e.nativeEvent.contentOffset.y;
+            }}
+            scrollEventThrottle={32}
           >
-            <View ref={contentRef} collapsable={false}>
-              {children}
-            </View>
+            {children}
           </ScrollView>
         ) : (
           <View style={{ flex: 1, paddingBottom: insets.bottom }}>{children}</View>
