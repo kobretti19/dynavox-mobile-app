@@ -59,7 +59,15 @@ export default function Dashboard() {
       <Text style={{ fontSize: 24, fontWeight: '800', color: colors.text, marginTop: 4 }}>{t('mobile.welcome', { name: myName.split(' ')[0] || '' })} 👋</Text>
       <Text style={[styles.subtitle, { marginBottom: 14 }]}>{t('dashboard.welcome')}</Text>
 
-      <Button title={t('mobile.quickScan')} icon='📷' onPress={() => router.push('/scan')} style={{ marginBottom: 12, paddingVertical: 16 }} />
+      <Row style={{ marginBottom: 12 }}>
+        <Button title={t('mobile.quickScan')} icon='📷' onPress={() => router.push('/scan')} style={{ flex: 1, paddingVertical: 16 }} />
+        <Button
+          title={t('repairs.newRepairTicket')}
+          variant='secondary'
+          onPress={() => router.navigate({ pathname: '/repairs', params: { new: '1' } })}
+          style={{ flex: 1, paddingVertical: 16 }}
+        />
+      </Row>
 
       <Row style={{ marginBottom: 10 }}>
         <StatTile label={t('dashboard.totalEquipment')} value={data.equipment.length} icon='🔧' onPress={() => router.navigate('/equipment')} />
