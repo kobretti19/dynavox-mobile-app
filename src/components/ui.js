@@ -294,7 +294,7 @@ export const Select = ({
       </Pressable>
       <Sheet visible={open} onClose={() => setOpen(false)} title={label || placeholder} scroll={false}>
         <View style={{ padding: 12 }}>
-          <View style={[styles.searchBox, { flex: 0 }]}>
+          <View style={[styles.searchBox, styles.searchBoxStatic]}>
             <TextInput
               value={q}
               onChangeText={setQ}
@@ -391,7 +391,7 @@ export const MultiSelect = ({ label, value = [], options, onChange, placeholder 
       </Pressable>
       <Sheet visible={open} onClose={() => setOpen(false)} title={label} actionLabel='OK' onAction={() => setOpen(false)} scroll={false}>
         <View style={{ padding: 12 }}>
-          <View style={[styles.searchBox, { flex: 0 }]}>
+          <View style={[styles.searchBox, styles.searchBoxStatic]}>
             <TextInput
               value={q}
               onChangeText={setQ}
@@ -493,6 +493,8 @@ export const styles = StyleSheet.create({
     borderColor: colors.border,
     height: 42,
   },
+  // Search box stacked in a column (picker sheets): don't let flex collapse it.
+  searchBoxStatic: { flexGrow: 0, flexShrink: 0, flexBasis: 'auto' },
   searchInput: { flex: 1, fontSize: 15, color: colors.text, paddingVertical: 0 },
   label: { fontSize: 13, fontWeight: '600', color: colors.gray, marginBottom: 6 },
   hint: { fontSize: 12, color: colors.textMuted, marginTop: 4 },

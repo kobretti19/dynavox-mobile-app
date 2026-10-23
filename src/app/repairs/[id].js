@@ -29,6 +29,9 @@ import {
 } from '../../components/ui';
 import { colors } from '../../theme';
 import ScanModal from '../../components/ScanModal';
+import LookupField from '../../components/LookupField';
+import { deviceFields } from '../../utils/entityFields';
+import EntityForm from '../../components/EntityForm';
 
 const formatFileSize = (bytes) => {
   if (bytes < 1024) return `${bytes} B`;
@@ -66,6 +69,7 @@ export default function RepairDetail() {
   const [refreshing, setRefreshing] = useState(false);
   const [details, setDetails] = useState(null);
   const [saveStatus, setSaveStatus] = useState('');
+  const [deviceForm, setDeviceForm] = useState(null); // { mode: 'new' | 'edit', initial }
   const [lookups, setLookups] = useState({ customers: [], dealers: [], devices: [], parts: [], users: [] });
   const [attachments, setAttachments] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -269,8 +273,6 @@ export default function RepairDetail() {
     }
   };
 
-  const customerOptions = lookups.customers.map((c) => ({ value: c.id, label: c.name, sublabel: [c.city, c.email].filter(Boolean).join(' · ') }));
-  const dealerOptions = lookups.dealers.map((d) => ({ value: d.id, label: d.name, sublabel: d.city || undefined }));
   const deviceOptions = lookups.devices.filter((d) => !attachedDeviceIds.has(d.id)).map((d) => ({ value: d.id, label: deviceLabel(d) }));
   const partOptions = lookups.parts.map((p) => ({
     value: p.id,
@@ -347,6 +349,7 @@ export default function RepairDetail() {
                 </Text>
                 <Text style={styles.small}>SN: {d.serial_number}</Text>
               </Pressable>
+              <Button title='✏️' small variant='secondary' onPress={() => setDeviceForm({ mode: 'edit', initial: d })} />
               <Button title='✕' small variant='dangerOutline' onPress={() => run(() => repairsAPI.removeDevice(id, d.id))} />
             </Row>
           ))}
@@ -357,10 +360,9 @@ export default function RepairDetail() {
               options={deviceOptions}
               placeholder={t('repairReport.searchSerialOrCreate')}
               createLabel={t('common.create')}
-              onCreate={async (serial) => {
-                await repairsAPI.addDevice(id, { serial_number: serial });
-                await loadTicket();
-                loadLookups();
+              onCreate={(serial) => {
+                // Open the full device form so brand / model can be filled in right away.
+                setTimeout(() => setDeviceForm({ mode: 'new', initial: { serial_number: serial } }), 350);
                 return null;
               }}
               onChange={(deviceId) =>
@@ -374,6 +376,25 @@ export default function RepairDetail() {
             <Button title={t('mobile.scanSerial')} icon='📷' small variant='secondary' style={{ alignSelf: 'flex-start', marginTop: -6 }} onPress={() => setScanOpen(true)} />
           </View>
         </Card>
+
+        <EntityForm
+          visible={!!deviceForm}
+          title={deviceForm?.mode === 'edit' ? t('devices.editDevice') : t('devices.addDevice').replace(/^\+\s*/, '')}
+          fields={deviceFields(t)}
+          initial={deviceForm?.initial}
+          onClose={() => setDeviceForm(null)}
+          onSubmit={async (values) => {
+            if (deviceForm.mode === 'edit') {
+              await devicesAPI.update(deviceForm.initial.id, values);
+            } else {
+              const res = await devicesAPI.create(values);
+              await repairsAPI.addDevice(id, { device_id: res.data.data.id });
+            }
+            setDeviceForm(null);
+            await loadTicket();
+            loadLookups();
+          }}
+        />
 
         <ScanModal
           visible={scanOpen}
@@ -431,40 +452,28 @@ export default function RepairDetail() {
         <Card>
           <SectionTitle style={{ marginTop: 0 }}>{t('repairReport.ticketDetails')}</SectionTitle>
           <Segmented options={REPAIR_TYPES.map((v) => ({ value: v, label: v }))} value={details.type} onChange={set('type')} style={{ marginBottom: 14 }} />
-          <Select
+          <LookupField
+            kind='customer'
             label={t('repairs.fieldCustomer')}
             value={details.customer_id}
-            options={customerOptions}
-            allowClear
+            records={lookups.customers}
             placeholder={t('repairs.searchOrCreateCustomer')}
-            createLabel={t('common.create')}
-            onCreate={async (name) => {
-              const res = await customersAPI.create({ name });
-              await loadLookups();
-              return res.data.data.id;
-            }}
+            onSaved={loadLookups}
             onChange={set('customer_id')}
-          />
-          {details.customer_id ? (
-            <Button title={`${t('repairs.fieldCustomer')} ↗`} small variant='secondary' style={{ alignSelf: 'flex-start', marginTop: -6, marginBottom: 12 }} onPress={() => router.push(`/customers/${details.customer_id}`)} />
-          ) : null}
-          <Select
+          >
+            {details.customer_id ? <Button title='↗' small variant='secondary' onPress={() => router.push(`/customers/${details.customer_id}`)} /> : null}
+          </LookupField>
+          <LookupField
+            kind='dealer'
             label={t('repairs.fieldDealer')}
             value={details.dealer_id}
-            options={dealerOptions}
-            allowClear
+            records={lookups.dealers}
             placeholder={t('repairs.searchOrCreateDealer')}
-            createLabel={t('common.create')}
-            onCreate={async (name) => {
-              const res = await dealersAPI.create({ name });
-              await loadLookups();
-              return res.data.data.id;
-            }}
+            onSaved={loadLookups}
             onChange={set('dealer_id')}
-          />
-          {details.dealer_id ? (
-            <Button title={`${t('repairs.fieldDealer')} ↗`} small variant='secondary' style={{ alignSelf: 'flex-start', marginTop: -6, marginBottom: 12 }} onPress={() => router.push(`/dealers/${details.dealer_id}`)} />
-          ) : null}
+          >
+            {details.dealer_id ? <Button title='↗' small variant='secondary' onPress={() => router.push(`/dealers/${details.dealer_id}`)} /> : null}
+          </LookupField>
 
           <Text style={styles.label}>{t('repairReport.shippingLabel')}</Text>
           <Segmented

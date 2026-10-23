@@ -27,6 +27,7 @@ import {
 } from '../../components/ui';
 import DateField from '../../components/DateField';
 import ScanModal from '../../components/ScanModal';
+import LookupField from '../../components/LookupField';
 import { colors, tone } from '../../theme';
 
 const emptyFilters = { status: null, type: null, customer: null, dealer: null, device: null, from: null, to: null, min: '', max: '' };
@@ -135,6 +136,7 @@ export default function Repairs() {
       setSaving(false);
     }
   };
+
 
   const customerOptions = lookups.customers.map((c) => ({ value: c.id, label: c.name, sublabel: [c.city, c.email].filter(Boolean).join(' · ') }));
   const dealerOptions = lookups.dealers.map((d) => ({ value: d.id, label: d.name, sublabel: d.city || undefined }));
@@ -298,57 +300,36 @@ export default function Repairs() {
           onChange={(v) => setForm({ ...form, type: v })}
           style={{ marginBottom: 14 }}
         />
-        <Select
+        <LookupField
+          kind='customer'
           label={t('repairs.fieldCustomer')}
           value={form.customer_id}
-          options={customerOptions}
-          allowClear
+          records={lookups.customers}
           placeholder={t('repairs.searchOrCreateCustomer')}
-          createLabel={t('common.create')}
-          onCreate={async (name) => {
-            const res = await customersAPI.create({ name });
-            await loadLookups();
-            return res.data.data.id;
-          }}
-          onChange={(v) => setForm({ ...form, customer_id: v })}
+          onSaved={loadLookups}
+          onChange={(v) => setForm((f) => ({ ...f, customer_id: v }))}
         />
-        <Select
+        <LookupField
+          kind='dealer'
           label={t('repairs.fieldDealer')}
           value={form.dealer_id}
-          options={dealerOptions}
-          allowClear
+          records={lookups.dealers}
           placeholder={t('repairs.searchOrCreateDealer')}
-          createLabel={t('common.create')}
-          onCreate={async (name) => {
-            const res = await dealersAPI.create({ name });
-            await loadLookups();
-            return res.data.data.id;
-          }}
-          onChange={(v) => setForm({ ...form, dealer_id: v })}
+          onSaved={loadLookups}
+          onChange={(v) => setForm((f) => ({ ...f, dealer_id: v }))}
         />
-        <Select
+        <LookupField
+          kind='device'
           label={t('repairs.fieldDevice')}
           value={form.device_id}
-          options={deviceOptions}
-          allowClear
+          records={lookups.devices}
           placeholder={t('repairs.searchSerialOrCreateDevice')}
           hint={t('repairs.attachDeviceHint')}
-          createLabel={t('common.create')}
-          onCreate={async (serial) => {
-            const res = await devicesAPI.create({ serial_number: serial });
-            await loadLookups();
-            return res.data.data.id;
-          }}
-          onChange={(v) => setForm({ ...form, device_id: v })}
-        />
-        <Button
-          title={t('mobile.scanSerial')}
-          icon='📷'
-          small
-          variant='secondary'
-          style={{ alignSelf: 'flex-start', marginTop: -6, marginBottom: 14 }}
-          onPress={() => setScanOpen(true)}
-        />
+          onSaved={loadLookups}
+          onChange={(v) => setForm((f) => ({ ...f, device_id: v }))}
+        >
+          <Button title={t('mobile.scanSerial')} icon='📷' small variant='secondary' onPress={() => setScanOpen(true)} />
+        </LookupField>
         <ScanModal visible={scanOpen} onClose={() => setScanOpen(false)} onScanned={useScannedSerial} />
         <Input
           label={t('repairs.fieldAccessories')}
