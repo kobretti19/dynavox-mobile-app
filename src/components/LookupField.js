@@ -3,6 +3,8 @@ import { customersAPI, dealersAPI, devicesAPI } from '../api';
 import { useLanguage } from '../context/LanguageContext';
 import { customerFields, dealerFields, deviceFields } from '../utils/entityFields';
 import { deviceLabel } from '../utils/status';
+import { View } from 'react-native';
+import { tone } from '../theme';
 import EntityForm from './EntityForm';
 import { Button, Row, Select } from './ui';
 
@@ -36,7 +38,9 @@ const KINDS = {
 // Searchable picker for a customer / dealer / device. Something not in the
 // list opens the full form (prefilled with what was typed), and the picked
 // record can be edited in place.
-const LookupField = ({ kind, label, value, records, onChange, onSaved, placeholder, hint, exclude, children }) => {
+// tone: 'green' / 'red' tints the field (our product / foreign device);
+// prefill(text) builds the new-record form values from what was typed.
+const LookupField = ({ kind, label, value, records, onChange, onSaved, placeholder, hint, exclude, children, tone: toneName, prefill }) => {
   const { t } = useLanguage();
   const cfg = KINDS[kind];
   const [form, setForm] = useState(null); // { mode: 'new' | 'edit', initial }
@@ -61,8 +65,9 @@ const LookupField = ({ kind, label, value, records, onChange, onSaved, placehold
 
   const label1 = (key) => t(key).replace(/^\+\s*/, '');
 
+  const tint = toneName ? tone[toneName] : null;
   return (
-    <>
+    <View style={tint ? { backgroundColor: tint.bg, borderColor: tint.color, borderWidth: 1, borderRadius: 12, padding: 8, paddingBottom: 0, marginBottom: 10 } : null}>
       <Select
         label={label}
         value={value}
@@ -72,7 +77,7 @@ const LookupField = ({ kind, label, value, records, onChange, onSaved, placehold
         hint={hint}
         createLabel={label1(cfg.newTitle)}
         onCreate={(text) => {
-          openForm({ mode: 'new', initial: { [cfg.firstKey]: text } });
+          openForm({ mode: 'new', initial: prefill ? prefill(text) : { [cfg.firstKey]: text } });
           return undefined;
         }}
         onChange={(v) => onChange(v)}
@@ -93,7 +98,7 @@ const LookupField = ({ kind, label, value, records, onChange, onSaved, placehold
         onClose={() => setForm(null)}
         onSubmit={submit}
       />
-    </>
+    </View>
   );
 };
 

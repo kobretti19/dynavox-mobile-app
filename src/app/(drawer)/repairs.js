@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FlatList, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { customersAPI, dealersAPI, devicesAPI, repairsAPI } from '../../api';
+import { customersAPI, dealersAPI, devicesAPI, equipmentAPI, repairsAPI } from '../../api';
 import { errorMessage } from '../../api/client';
 import { useLanguage } from '../../context/LanguageContext';
 import { useApi } from '../../utils/useApi';
@@ -28,6 +28,11 @@ import DateField from '../../components/DateField';
 import ScanModal from '../../components/ScanModal';
 import ScanSearchBar from '../../components/ScanSearchBar';
 import LookupField from '../../components/LookupField';
+import EntityForm from '../../components/EntityForm';
+import OwnProductBadge, { ForeignNotice, ownTone } from '../../components/OwnProductBadge';
+import { deviceFields } from '../../utils/entityFields';
+import { codeMatches } from '../../utils/codes';
+import { deviceFromOwnProduct, devicePrefill, findOwnProduct } from '../../utils/ownProducts';
 import { colors, tone } from '../../theme';
 
 const emptyFilters = { status: null, type: null, customer: null, dealer: null, device: null, from: null, to: null, min: '', max: '' };
@@ -37,7 +42,8 @@ export default function Repairs() {
   const { t } = useLanguage();
   const repairs = useApi(() => repairsAPI.getAll());
   const stats = useApi(() => repairsAPI.getStats());
-  const [lookups, setLookups] = useState({ customers: [], dealers: [], devices: [] });
+  const [lookups, setLookups] = useState({ customers: [], dealers: [], devices: [], equipment: [] });
+  const [foreignDevice, setForeignDevice] = useState(null); // device form for a scanned serial that isn't ours
   const [q, setQ] = useState('');
   const [statusTab, setStatusTab] = useState('open');
   const [filters, setFilters] = useState(emptyFilters);
@@ -50,8 +56,13 @@ export default function Repairs() {
 
   const loadLookups = async () => {
     try {
-      const [c, d, dv] = await Promise.all([customersAPI.getAll(), dealersAPI.getAll(), devicesAPI.getAll()]);
-      setLookups({ customers: c.data.data || [], dealers: d.data.data || [], devices: dv.data.data || [] });
+      const [c, d, dv, eq] = await Promise.all([
+        customersAPI.getAll(),
+        dealersAPI.getAll(),
+        devicesAPI.getAll(),
+        equipmentAPI.getAll().catch(() => ({ data: { data: [] } })),
+      ]);
+      setLookups({ customers: c.data.data || [], dealers: d.data.data || [], devices: dv.data.data || [], equipment: eq.data.data || [] });
     } catch {
       // the pickers just stay empty
     }
@@ -115,15 +126,23 @@ export default function Repairs() {
     });
 
   // Scanned serial -> pick the existing device, or create it.
+  // Scanned serial: a known device is attached as is; one of our products
+  // becomes a device with its brand / model; anything else opens the device
+  // form with a red "not our device" notice.
   const useScannedSerial = async (serial) => {
     setScanOpen(false);
-    const existing = lookups.devices.find((d) => String(d.serial_number).trim().toLowerCase() === serial.toLowerCase());
+    const existing = lookups.devices.find((d) => codeMatches(serial, d.serial_number));
     if (existing) {
       addDeviceId(existing.id);
       return;
     }
+    const own = findOwnProduct(lookups.equipment, serial);
+    if (!own) {
+      setTimeout(() => setForeignDevice({ serial_number: serial }), 350);
+      return;
+    }
     try {
-      const res = await devicesAPI.create({ serial_number: serial });
+      const res = await devicesAPI.create(deviceFromOwnProduct(own));
       await loadLookups();
       addDeviceId(res.data.data.id);
     } catch (err) {
@@ -342,8 +361,11 @@ export default function Repairs() {
             exclude={new Set(form.device_ids)}
             placeholder={t('repairs.searchSerialOrCreateDevice')}
             onSaved={loadLookups}
+            prefill={(text) => devicePrefill(lookups.equipment, text)}
+            tone={ownTone(lookups.equipment, lookups.devices.find((d) => d.id === deviceId)?.serial_number)}
             onChange={(v) => replaceDeviceId(i, v)}
           >
+            <OwnProductBadge equipment={lookups.equipment} serial={lookups.devices.find((d) => d.id === deviceId)?.serial_number} />
             <Button title='✕' small variant='dangerOutline' onPress={() => replaceDeviceId(i, null)} />
           </LookupField>
         ))}
@@ -357,11 +379,26 @@ export default function Repairs() {
           placeholder={form.device_ids.length ? `＋ ${t('repairs.searchSerialOrCreateDevice')}` : t('repairs.searchSerialOrCreateDevice')}
           hint={form.device_ids.length === 0 ? t('repairs.attachDeviceHint') : undefined}
           onSaved={loadLookups}
+          prefill={(text) => devicePrefill(lookups.equipment, text)}
           onChange={(v) => v && addDeviceId(v)}
         >
           <Button title={t('mobile.scanSerial')} icon='📷' small variant='secondary' onPress={() => setScanOpen(true)} />
         </LookupField>
         <ScanModal visible={scanOpen} onClose={() => setScanOpen(false)} onScanned={useScannedSerial} />
+        <EntityForm
+          visible={!!foreignDevice}
+          title={t('devices.addDevice').replace(/^\+\s*/, '')}
+          fields={deviceFields(t)}
+          initial={foreignDevice}
+          notice={<ForeignNotice />}
+          onClose={() => setForeignDevice(null)}
+          onSubmit={async (values) => {
+            const res = await devicesAPI.create(values);
+            await loadLookups();
+            addDeviceId(res.data.data.id);
+            setForeignDevice(null);
+          }}
+        />
         <Input
           label={t('repairs.fieldAccessories')}
           value={form.accessories}

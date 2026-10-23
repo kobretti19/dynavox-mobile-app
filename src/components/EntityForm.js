@@ -7,7 +7,7 @@ import ScanModal from './ScanModal';
 // Simple create/edit sheet for flat records (customers, dealers, devices,
 // users...). fields: [{ key, label, required?, keyboardType?, multiline?,
 // autoCapitalize?, secure?, hint? }]
-const EntityForm = ({ visible, title, fields, initial, onClose, onSubmit, children, extraValues }) => {
+const EntityForm = ({ visible, title, fields, initial, onClose, onSubmit, children, extraValues, notice }) => {
   const { t } = useLanguage();
   const [values, setValues] = useState({});
   const [saving, setSaving] = useState(false);
@@ -42,6 +42,7 @@ const EntityForm = ({ visible, title, fields, initial, onClose, onSubmit, childr
 
   return (
     <Sheet visible={visible} onClose={onClose} title={title} actionLabel={t('common.save')} onAction={save} actionLoading={saving}>
+      {notice}
       {fields.map((f) => (
         <Input
           key={f.key}

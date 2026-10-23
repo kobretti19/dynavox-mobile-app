@@ -3,7 +3,7 @@ import { ActivityIndicator, Image, Pressable, RefreshControl, ScrollView, Text, 
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import * as WebBrowser from 'expo-web-browser';
-import { customersAPI, dealersAPI, devicesAPI, partsAPI, repairsAPI, usersAPI } from '../../api';
+import { customersAPI, dealersAPI, devicesAPI, equipmentAPI, partsAPI, repairsAPI, usersAPI } from '../../api';
 import { errorMessage } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -27,11 +27,14 @@ import {
   showError,
   styles,
 } from '../../components/ui';
-import { colors } from '../../theme';
+import { colors, tone } from '../../theme';
 import ScanModal from '../../components/ScanModal';
 import LookupField from '../../components/LookupField';
 import { deviceFields } from '../../utils/entityFields';
 import EntityForm from '../../components/EntityForm';
+import OwnProductBadge, { ForeignNotice } from '../../components/OwnProductBadge';
+import { codeMatches } from '../../utils/codes';
+import { deviceFromOwnProduct, devicePrefill, findOwnProduct } from '../../utils/ownProducts';
 
 const formatFileSize = (bytes) => {
   if (bytes < 1024) return `${bytes} B`;
@@ -70,7 +73,7 @@ export default function RepairDetail() {
   const [details, setDetails] = useState(null);
   const [saveStatus, setSaveStatus] = useState('');
   const [deviceForm, setDeviceForm] = useState(null); // { mode: 'new' | 'edit', initial }
-  const [lookups, setLookups] = useState({ customers: [], dealers: [], devices: [], parts: [], users: [] });
+  const [lookups, setLookups] = useState({ customers: [], dealers: [], devices: [], parts: [], users: [], equipment: [] });
   const [attachments, setAttachments] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [newStatus, setNewStatus] = useState('');
@@ -104,12 +107,13 @@ export default function RepairDetail() {
 
   const loadLookups = useCallback(async () => {
     try {
-      const [c, d, dv, p, u] = await Promise.all([
+      const [c, d, dv, p, u, eq] = await Promise.all([
         customersAPI.getAll(),
         dealersAPI.getAll(),
         devicesAPI.getAll(),
         partsAPI.getAll(),
         usersAPI.getAll(),
+        equipmentAPI.getAll().catch(() => ({ data: { data: [] } })),
       ]);
       setLookups({
         customers: c.data.data || [],
@@ -117,6 +121,7 @@ export default function RepairDetail() {
         devices: dv.data.data || [],
         parts: p.data.data || [],
         users: u.data.data || [],
+        equipment: eq.data.data || [],
       });
     } catch {
       // pickers stay empty
@@ -341,18 +346,22 @@ export default function RepairDetail() {
         <Card>
           <SectionTitle style={{ marginTop: 0 }}>{t('repairReport.devicesHeading')}</SectionTitle>
           {(ticket.devices || []).length === 0 ? <Text style={[styles.small, { marginBottom: 8 }]}>{t('repairReport.noDevicesAttached')}</Text> : null}
-          {(ticket.devices || []).map((d) => (
-            <Row key={d.id} style={{ paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-              <Pressable style={{ flex: 1 }} onPress={() => router.push(`/devices/${d.id}`)}>
-                <Text style={{ color: colors.blue, fontWeight: '600' }}>
-                  {[d.brand, d.model].filter(Boolean).join(' ') || '-'}
-                </Text>
-                <Text style={styles.small}>SN: {d.serial_number}</Text>
-              </Pressable>
-              <Button title='✏️' small variant='secondary' onPress={() => setDeviceForm({ mode: 'edit', initial: d })} />
-              <Button title='✕' small variant='dangerOutline' onPress={() => run(() => repairsAPI.removeDevice(id, d.id))} />
-            </Row>
-          ))}
+          {(ticket.devices || []).map((d) => {
+            const tint = tone[findOwnProduct(lookups.equipment, d.serial_number) ? 'green' : 'red'];
+            return (
+              <Row key={d.id} style={{ padding: 8, marginBottom: 6, borderRadius: 10, borderWidth: 1, borderColor: tint.color, backgroundColor: tint.bg }}>
+                <Pressable style={{ flex: 1 }} onPress={() => router.push(`/devices/${d.id}`)}>
+                  <Text style={{ color: colors.blue, fontWeight: '600' }}>
+                    {[d.brand, d.model].filter(Boolean).join(' ') || '-'}
+                  </Text>
+                  <Text style={styles.small}>SN: {d.serial_number}</Text>
+                  <OwnProductBadge equipment={lookups.equipment} serial={d.serial_number} style={{ alignSelf: 'flex-start', marginTop: 4 }} />
+                </Pressable>
+                <Button title='✏️' small variant='secondary' onPress={() => setDeviceForm({ mode: 'edit', initial: d })} />
+                <Button title='✕' small variant='dangerOutline' onPress={() => run(() => repairsAPI.removeDevice(id, d.id))} />
+              </Row>
+            );
+          })}
           <View style={{ marginTop: 10 }}>
             <Select
               label=''
@@ -362,7 +371,7 @@ export default function RepairDetail() {
               createLabel={t('common.create')}
               onCreate={(serial) => {
                 // Open the full device form so brand / model can be filled in right away.
-                setTimeout(() => setDeviceForm({ mode: 'new', initial: { serial_number: serial } }), 350);
+                setTimeout(() => setDeviceForm({ mode: 'new', initial: devicePrefill(lookups.equipment, serial), foreign: !findOwnProduct(lookups.equipment, serial) }), 350);
                 return null;
               }}
               onChange={(deviceId) =>
@@ -382,6 +391,7 @@ export default function RepairDetail() {
           title={deviceForm?.mode === 'edit' ? t('devices.editDevice') : t('devices.addDevice').replace(/^\+\s*/, '')}
           fields={deviceFields(t)}
           initial={deviceForm?.initial}
+          notice={deviceForm?.foreign ? <ForeignNotice /> : null}
           onClose={() => setDeviceForm(null)}
           onSubmit={async (values) => {
             if (deviceForm.mode === 'edit') {
@@ -400,11 +410,18 @@ export default function RepairDetail() {
           visible={scanOpen}
           onClose={() => setScanOpen(false)}
           onScanned={(serial) => {
+            // Known device -> attach; our product -> new device with its brand /
+            // model; anything else -> device form with a red "not ours" notice.
             setScanOpen(false);
-            const existing = lookups.devices.find((d) => String(d.serial_number).trim().toLowerCase() === serial.toLowerCase());
+            const existing = lookups.devices.find((d) => codeMatches(serial, d.serial_number));
+            const own = existing ? null : findOwnProduct(lookups.equipment, serial);
+            if (!existing && !own) {
+              setTimeout(() => setDeviceForm({ mode: 'new', initial: { serial_number: serial }, foreign: true }), 350);
+              return;
+            }
             run(async () => {
-              // The backend reuses a device with that serial or creates it.
-              await repairsAPI.addDevice(id, existing ? { device_id: existing.id } : { serial_number: serial });
+              const deviceId = existing ? existing.id : (await devicesAPI.create(deviceFromOwnProduct(own))).data.data.id;
+              await repairsAPI.addDevice(id, { device_id: deviceId });
               loadLookups();
             });
           }}
