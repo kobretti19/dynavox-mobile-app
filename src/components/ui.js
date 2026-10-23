@@ -229,7 +229,7 @@ const useAndroidKeyboard = (visible, rootRef, scrollRef, scrollY) => {
     openSheets.push(id);
     const isTop = () => openSheets[openSheets.length - 1] === id;
     const show = Keyboard.addListener('keyboardDidShow', (e) => {
-      if (!isTop() || !rootRef.current) return;
+      if (!isTop() || typeof rootRef.current?.measureInWindow !== 'function') return;
       const kbTop = e.endCoordinates.screenY;
       rootRef.current.measureInWindow((x, y, w, h) => {
         setOverlap(Math.max(0, y + h - kbTop));
@@ -268,45 +268,43 @@ export const Sheet = ({ visible, onClose, title, children, actionLabel, onAction
   const kb = useAndroidKeyboard(visible, rootRef, scrollRef, scrollY);
   return (
     <Modal visible={visible} animationType='slide' presentationStyle='pageSheet' onRequestClose={onClose}>
-      <KeyboardAvoidingView
-        ref={rootRef}
-        style={{ flex: 1, backgroundColor: colors.bg, paddingBottom: kb }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <View style={[styles.sheetHeader, Platform.OS === 'android' && { paddingTop: insets.top + 8 }]}>
-          <Pressable onPress={onClose} hitSlop={12} style={{ minWidth: 60 }}>
-            <Text style={{ fontSize: 22, color: colors.textMuted }}>✕</Text>
-          </Pressable>
-          <Text style={styles.sheetTitle} numberOfLines={1}>
-            {title}
-          </Text>
-          <View style={{ minWidth: 60, alignItems: 'flex-end' }}>
-            {onAction ? (
-              actionLoading ? (
-                <ActivityIndicator color={colors.brand} />
-              ) : (
-                <Pressable onPress={onAction} hitSlop={12}>
-                  <Text style={{ fontSize: 16, fontWeight: '700', color: colors.brand }}>{actionLabel}</Text>
-                </Pressable>
-              )
-            ) : null}
+      <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View ref={rootRef} collapsable={false} style={{ flex: 1, paddingBottom: kb }}>
+          <View style={[styles.sheetHeader, Platform.OS === 'android' && { paddingTop: insets.top + 8 }]}>
+            <Pressable onPress={onClose} hitSlop={12} style={{ minWidth: 60 }}>
+              <Text style={{ fontSize: 22, color: colors.textMuted }}>✕</Text>
+            </Pressable>
+            <Text style={styles.sheetTitle} numberOfLines={1}>
+              {title}
+            </Text>
+            <View style={{ minWidth: 60, alignItems: 'flex-end' }}>
+              {onAction ? (
+                actionLoading ? (
+                  <ActivityIndicator color={colors.brand} />
+                ) : (
+                  <Pressable onPress={onAction} hitSlop={12}>
+                    <Text style={{ fontSize: 16, fontWeight: '700', color: colors.brand }}>{actionLabel}</Text>
+                  </Pressable>
+                )
+              ) : null}
+            </View>
           </View>
+          {scroll ? (
+            <ScrollView
+              ref={scrollRef}
+              contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 40 }}
+              keyboardShouldPersistTaps='handled'
+              onScroll={(e) => {
+                scrollY.current = e.nativeEvent.contentOffset.y;
+              }}
+              scrollEventThrottle={32}
+            >
+              {children}
+            </ScrollView>
+          ) : (
+            <View style={{ flex: 1, paddingBottom: insets.bottom }}>{children}</View>
+          )}
         </View>
-        {scroll ? (
-          <ScrollView
-            ref={scrollRef}
-            contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 40 }}
-            keyboardShouldPersistTaps='handled'
-            onScroll={(e) => {
-              scrollY.current = e.nativeEvent.contentOffset.y;
-            }}
-            scrollEventThrottle={32}
-          >
-            {children}
-          </ScrollView>
-        ) : (
-          <View style={{ flex: 1, paddingBottom: insets.bottom }}>{children}</View>
-        )}
       </KeyboardAvoidingView>
     </Modal>
   );
