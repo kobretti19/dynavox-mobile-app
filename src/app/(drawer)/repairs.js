@@ -31,7 +31,7 @@ import LookupField from '../../components/LookupField';
 import { colors, tone } from '../../theme';
 
 const emptyFilters = { status: null, type: null, customer: null, dealer: null, device: null, from: null, to: null, min: '', max: '' };
-const emptyForm = { type: 'Reparatur', customer_id: null, dealer_id: null, device_id: null, accessories: '', problem_description: '' };
+const emptyForm = { type: 'Reparatur', customer_id: null, dealer_id: null, device_ids: [], accessories: '', problem_description: '' };
 
 export default function Repairs() {
   const { t } = useLanguage();
@@ -97,24 +97,35 @@ export default function Repairs() {
   // ?new=1&device=5 (from a device page or the scanner) opens the form.
   useEffect(() => {
     if (!params.new) return;
-    setForm({ ...emptyForm, device_id: params.device ? Number(params.device) : null });
+    setForm({ ...emptyForm, device_ids: params.device ? [Number(params.device)] : [] });
     setShowCreate(true);
     loadLookups();
     router.setParams({ new: undefined, device: undefined });
   }, [params.new, params.device]);
+
+  // A ticket can take several devices (customer brings in more than one).
+  const addDeviceId = (deviceId) =>
+    setForm((f) => (f.device_ids.includes(deviceId) ? f : { ...f, device_ids: [...f.device_ids, deviceId] }));
+  const replaceDeviceId = (index, deviceId) =>
+    setForm((f) => {
+      const ids = [...f.device_ids];
+      if (deviceId && !ids.includes(deviceId)) ids[index] = deviceId;
+      else if (!deviceId) ids.splice(index, 1);
+      return { ...f, device_ids: ids };
+    });
 
   // Scanned serial -> pick the existing device, or create it.
   const useScannedSerial = async (serial) => {
     setScanOpen(false);
     const existing = lookups.devices.find((d) => String(d.serial_number).trim().toLowerCase() === serial.toLowerCase());
     if (existing) {
-      setForm((f) => ({ ...f, device_id: existing.id }));
+      addDeviceId(existing.id);
       return;
     }
     try {
       const res = await devicesAPI.create({ serial_number: serial });
       await loadLookups();
-      setForm((f) => ({ ...f, device_id: res.data.data.id }));
+      addDeviceId(res.data.data.id);
     } catch (err) {
       showError(t('common.error'), t('mobile.saveFailed', { error: errorMessage(err) }));
     }
@@ -123,10 +134,12 @@ export default function Repairs() {
   const create = async () => {
     setSaving(true);
     try {
-      const { device_id, ...rest } = form;
+      const { device_ids, ...rest } = form;
       const res = await repairsAPI.create({ ...rest, customer_id: rest.customer_id || null, dealer_id: rest.dealer_id || null });
       const ticket = res.data.data;
-      if (device_id) await repairsAPI.addDevice(ticket.id, { device_id }).catch(() => {});
+      for (const device_id of device_ids) {
+        await repairsAPI.addDevice(ticket.id, { device_id }).catch(() => {});
+      }
       setShowCreate(false);
       repairs.reload();
       router.push(`/repairs/${ticket.id}`);
@@ -318,15 +331,32 @@ export default function Repairs() {
           onSaved={loadLookups}
           onChange={(v) => setForm((f) => ({ ...f, dealer_id: v }))}
         />
+        {form.device_ids.map((deviceId, i) => (
+          <LookupField
+            key={deviceId}
+            kind='device'
+            label={i === 0 ? t('repairs.fieldDevice') : undefined}
+            value={deviceId}
+            records={lookups.devices}
+            exclude={new Set(form.device_ids)}
+            placeholder={t('repairs.searchSerialOrCreateDevice')}
+            onSaved={loadLookups}
+            onChange={(v) => replaceDeviceId(i, v)}
+          >
+            <Button title='✕' small variant='dangerOutline' onPress={() => replaceDeviceId(i, null)} />
+          </LookupField>
+        ))}
         <LookupField
+          key={`add-${form.device_ids.length}`}
           kind='device'
-          label={t('repairs.fieldDevice')}
-          value={form.device_id}
+          label={form.device_ids.length === 0 ? t('repairs.fieldDevice') : undefined}
+          value={null}
           records={lookups.devices}
-          placeholder={t('repairs.searchSerialOrCreateDevice')}
-          hint={t('repairs.attachDeviceHint')}
+          exclude={new Set(form.device_ids)}
+          placeholder={form.device_ids.length ? `＋ ${t('repairs.searchSerialOrCreateDevice')}` : t('repairs.searchSerialOrCreateDevice')}
+          hint={form.device_ids.length === 0 ? t('repairs.attachDeviceHint') : undefined}
           onSaved={loadLookups}
-          onChange={(v) => setForm((f) => ({ ...f, device_id: v }))}
+          onChange={(v) => v && addDeviceId(v)}
         >
           <Button title={t('mobile.scanSerial')} icon='📷' small variant='secondary' onPress={() => setScanOpen(true)} />
         </LookupField>
