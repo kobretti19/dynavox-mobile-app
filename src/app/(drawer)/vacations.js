@@ -6,7 +6,7 @@ import { errorMessage } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { formatDate, getLocale, todayKey } from '../../utils/format';
-import { entriesOn, fmtDays, monthGrid, typeIcon, userColor, workingDays } from '../../utils/vacation';
+import { entriesOn, fmtDays, fmtHours, monthGrid, typeIcon, userColor, workingDays } from '../../utils/vacation';
 import { Button, Card, Fab, Input, Row, SectionTitle, Segmented, Select, Sheet, SwitchRow, confirm, showError, styles } from '../../components/ui';
 import DateField from '../../components/DateField';
 import { colors } from '../../theme';
@@ -14,6 +14,8 @@ import { colors } from '../../theme';
 const WEEKDAYS = { en: ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'], de: ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'] };
 
 const emptyForm = (userId, date) => ({ id: null, user_id: userId, type: 'vacation', start_date: date, end_date: date, half_day: false, note: '' });
+// Overtime hours (> 0 extra, < 0 compensated) or just a note for one day.
+const emptyOvertime = (userId, date) => ({ id: null, user_id: userId, date, hours: '', note: '' });
 
 export default function Vacations() {
   const { t, language } = useLanguage();
@@ -23,6 +25,8 @@ export default function Vacations() {
   const [month, setMonth] = useState(now.getMonth());
   const [view, setView] = useState('month');
   const [entries, setEntries] = useState([]);
+  const [overtime, setOvertime] = useState([]);
+  const [otForm, setOtForm] = useState(null);
   const [summary, setSummary] = useState([]);
   const [holidays, setHolidays] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -33,12 +37,14 @@ export default function Vacations() {
 
   const load = useCallback(async () => {
     try {
-      const [e, s, h] = await Promise.all([
+      const [e, s, h, o] = await Promise.all([
         vacationsAPI.getAll(`${year - 1}-12-01`, `${year + 1}-01-31`),
         vacationsAPI.getSummary(year),
         vacationsAPI.getHolidays(`${year - 1}-01-01`, `${year + 1}-12-31`),
+        vacationsAPI.getOvertime(`${year - 1}-12-01`, `${year + 1}-01-31`),
       ]);
       setEntries(e.data.data || []);
+      setOvertime(o.data.data || []);
       setSummary(s.data.data.users || []);
       setHolidays(h.data.data || []);
     } catch (err) {
@@ -65,6 +71,57 @@ export default function Vacations() {
   const openEdit = (e) => setForm({ ...e, half_day: !!e.half_day, note: e.note || '' });
   const canEdit = form && (isAdmin || form.user_id === user?.id);
 
+  const overtimeOn = (key) => overtime.filter((o) => o.date === key);
+  const openNewOvertime = (date) => setOtForm(emptyOvertime(user?.id, date || selectedDay || today));
+  const openOvertime = (o) => setOtForm({ ...o, hours: o.hours ? String(o.hours) : '', note: o.note || '' });
+  const canEditOt = otForm && (isAdmin || otForm.user_id === user?.id);
+
+  // A new entry can be switched between absence and overtime / note.
+  const switchKind = (kind) => {
+    if (kind === 'overtime' && form) {
+      setOtForm(emptyOvertime(form.user_id, form.start_date));
+      setForm(null);
+    } else if (kind === 'absence' && otForm) {
+      setForm(emptyForm(otForm.user_id, otForm.date));
+      setOtForm(null);
+    }
+  };
+  const kindOptions = [
+    { value: 'absence', label: `🏖️ ${t('vacations.kindAbsence')}` },
+    { value: 'overtime', label: `⏱️ ${t('vacations.kindOvertime')}` },
+  ];
+
+  const saveOvertime = async () => {
+    const hours = Number(String(otForm.hours || '0').replace(',', '.'));
+    if (!Number.isFinite(hours) || (!hours && !otForm.note.trim())) {
+      showError(t('common.error'), t('vacations.hoursHint'));
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload = { user_id: otForm.user_id, date: otForm.date, hours, note: otForm.note };
+      if (otForm.id) await vacationsAPI.updateOvertime(otForm.id, payload);
+      else await vacationsAPI.createOvertime(payload);
+      setOtForm(null);
+      load();
+    } catch (err) {
+      showError(t('common.error'), t('vacations.failedToSave', { error: errorMessage(err) }));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const removeOvertime = async () => {
+    if (!(await confirm(t('vacations.delete'), t('vacations.confirmDelete'), { confirmText: t('vacations.delete'), cancelText: t('common.cancel') }))) return;
+    try {
+      await vacationsAPI.deleteOvertime(otForm.id);
+      setOtForm(null);
+      load();
+    } catch (err) {
+      showError(t('common.error'), t('vacations.failedToSave', { error: errorMessage(err) }));
+    }
+  };
+
   const save = async () => {
     if (!form.start_date || !form.end_date || form.end_date < form.start_date) {
       showError(t('common.error'), `${t('vacations.from')} / ${t('vacations.to')}`);
@@ -76,7 +133,7 @@ export default function Vacations() {
       type: form.type,
       start_date: form.start_date,
       end_date: form.end_date,
-      half_day: form.half_day && form.start_date === form.end_date,
+      half_day: form.half_day,
       note: form.note,
     };
     try {
@@ -122,6 +179,7 @@ export default function Vacations() {
 
   const weekdays = WEEKDAYS[language] || WEEKDAYS.en;
   const dayEntries = entriesOn(entries, selectedDay);
+  const dayOvertime = overtimeOn(selectedDay);
   const awayToday = entriesOn(entries, today);
   const monthTitle = new Date(year, month, 1).toLocaleDateString(getLocale(), { month: 'long', year: 'numeric' });
 
@@ -214,6 +272,7 @@ export default function Vacations() {
                         }}
                       />
                     ))}
+                    {cell.inMonth && overtimeOn(cell.key).length ? <Text style={{ fontSize: 8, lineHeight: 10 }}>⏱️</Text> : null}
                   </View>
                 </View>
               </Pressable>
@@ -279,11 +338,19 @@ export default function Vacations() {
 
         {view === 'month' ? (
           <Card>
-            <SectionTitle style={{ marginTop: 0 }} right={<Button title={t('common.add')} small onPress={() => openNew(selectedDay)} />}>
+            <SectionTitle
+              style={{ marginTop: 0 }}
+              right={
+                <Row gap={6}>
+                  <Button title='⏱️' small variant='secondary' onPress={() => openNewOvertime(selectedDay)} />
+                  <Button title={t('common.add')} small onPress={() => openNew(selectedDay)} />
+                </Row>
+              }
+            >
               {formatDate(selectedDay)}
             </SectionTitle>
             {holidayMap[selectedDay] ? <Text style={{ color: colors.red, fontWeight: '600', marginBottom: 6 }}>🎉 {holidayMap[selectedDay]}</Text> : null}
-            {dayEntries.length === 0 && !holidayMap[selectedDay] ? <Text style={styles.small}>{t('vacations.nobodyAway')}</Text> : null}
+            {dayEntries.length === 0 && dayOvertime.length === 0 && !holidayMap[selectedDay] ? <Text style={styles.small}>{t('vacations.nobodyAway')}</Text> : null}
             {dayEntries.map((e) => (
               <Pressable key={e.id} onPress={() => openEdit(e)} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.border }}>
                 <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: userColor(e.user_id).dot }} />
@@ -296,6 +363,18 @@ export default function Vacations() {
                     {t(`vacations.type_${e.type}`)} · {formatDate(e.start_date)} – {formatDate(e.end_date)}
                     {e.note ? ` · ${e.note}` : ''}
                   </Text>
+                </View>
+              </Pressable>
+            ))}
+            {dayOvertime.map((o) => (
+              <Pressable key={`ot${o.id}`} onPress={() => openOvertime(o)} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.border }}>
+                <Text style={{ width: 12, fontSize: 11 }}>{o.hours ? '⏱️' : '📝'}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontWeight: '600', color: colors.text }}>
+                    {o.user_name}
+                    {o.hours ? ` ${fmtHours(o.hours)}` : ''}
+                  </Text>
+                  {o.note ? <Text style={styles.small}>{o.note}</Text> : null}
                 </View>
               </Pressable>
             ))}
@@ -342,6 +421,11 @@ export default function Vacations() {
               <Text style={styles.small}>
                 {t('vacations.colSick')}: {fmtDays(row.sick)}
               </Text>
+              {row.overtime_balance ? (
+                <Text style={[styles.small, { color: row.overtime_balance < 0 ? colors.red : colors.orange }]}>
+                  {t('vacations.colOvertime')}: {fmtHours(row.overtime_balance)}
+                </Text>
+              ) : null}
             </Row>
           </Card>
         ))}
@@ -359,6 +443,7 @@ export default function Vacations() {
       >
         {form ? (
           <>
+            {!form.id ? <Segmented options={kindOptions} value='absence' onChange={switchKind} style={{ marginBottom: 14 }} /> : null}
             {!canEdit ? <Text style={{ color: colors.orange, marginBottom: 12 }}>{t('vacations.readOnly', { name: form.user_name })}</Text> : null}
             {isAdmin ? (
               <Select
@@ -381,16 +466,62 @@ export default function Vacations() {
               onChange={(v) => canEdit && setForm({ ...form, start_date: v, end_date: form.end_date < v ? v : form.end_date })}
             />
             <DateField label={t('vacations.to')} value={form.end_date} minimumDate={form.start_date} onChange={(v) => canEdit && setForm({ ...form, end_date: v })} />
-            {form.start_date === form.end_date ? (
-              <SwitchRow label={t('vacations.halfDay')} value={form.half_day} onValueChange={(v) => canEdit && setForm({ ...form, half_day: v })} />
-            ) : null}
+            <SwitchRow
+              label={form.start_date === form.end_date ? t('vacations.halfDay') : t('vacations.halfDays')}
+              value={form.half_day}
+              onValueChange={(v) => canEdit && setForm({ ...form, half_day: v })}
+            />
             <Input label={t('vacations.note')} value={form.note} onChangeText={(v) => setForm({ ...form, note: v })} placeholder={t('vacations.notePlaceholder')} editable={!!canEdit} />
             <Text style={[styles.subtitle, { marginBottom: 14 }]}>
               {t('vacations.workingDays', {
-                count: fmtDays(workingDays(form.start_date, form.end_date, form.half_day && form.start_date === form.end_date, holidayMap)),
+                count: fmtDays(workingDays(form.start_date, form.end_date, form.half_day, holidayMap)),
               })}
             </Text>
             {form.id && canEdit ? <Button title={t('vacations.delete')} variant='dangerOutline' onPress={remove} /> : null}
+          </>
+        ) : null}
+      </Sheet>
+
+      <Sheet
+        visible={!!otForm}
+        onClose={() => setOtForm(null)}
+        title={otForm?.id ? t('vacations.editOvertime') : t('vacations.newOvertime')}
+        actionLabel={canEditOt ? t('vacations.save') : undefined}
+        onAction={canEditOt ? saveOvertime : undefined}
+        actionLoading={saving}
+      >
+        {otForm ? (
+          <>
+            {!otForm.id ? <Segmented options={kindOptions} value='overtime' onChange={switchKind} style={{ marginBottom: 14 }} /> : null}
+            {!canEditOt ? <Text style={{ color: colors.orange, marginBottom: 12 }}>{t('vacations.readOnly', { name: otForm.user_name })}</Text> : null}
+            {isAdmin ? (
+              <Select
+                label={t('vacations.person')}
+                value={otForm.user_id}
+                options={summary.map((u) => ({ value: u.user_id, label: u.user_name }))}
+                onChange={(v) => setOtForm({ ...otForm, user_id: v })}
+              />
+            ) : null}
+            <DateField label={t('vacations.date')} value={otForm.date} onChange={(v) => canEditOt && setOtForm({ ...otForm, date: v })} />
+            <Input
+              label={t('vacations.hours')}
+              hint={t('vacations.hoursHint')}
+              value={otForm.hours}
+              onChangeText={(v) => setOtForm({ ...otForm, hours: v })}
+              keyboardType='numbers-and-punctuation'
+              placeholder='+2'
+              editable={!!canEditOt}
+            />
+            <Input
+              label={t('vacations.note')}
+              value={otForm.note}
+              onChangeText={(v) => setOtForm({ ...otForm, note: v })}
+              placeholder={t('vacations.overtimeNotePlaceholder')}
+              multiline
+              maxLength={255}
+              editable={!!canEditOt}
+            />
+            {otForm.id && canEditOt ? <Button title={t('vacations.delete')} variant='dangerOutline' onPress={removeOvertime} /> : null}
           </>
         ) : null}
       </Sheet>

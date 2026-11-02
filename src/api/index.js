@@ -127,6 +127,10 @@ export const vacationsAPI = {
   getHolidays: (from, to) => api.get("/vacations/holidays", { params: { from, to } }),
   addHolidays: (holidays) => api.post("/vacations/holidays", { holidays }),
   deleteHoliday: (id) => api.delete(`/vacations/holidays/${id}`),
+  getOvertime: (from, to) => api.get("/vacations/overtime", { params: { from, to } }),
+  createOvertime: (data) => api.post("/vacations/overtime", data),
+  updateOvertime: (id, data) => api.put(`/vacations/overtime/${id}`, data),
+  deleteOvertime: (id) => api.delete(`/vacations/overtime/${id}`),
 };
 
 // Customers API

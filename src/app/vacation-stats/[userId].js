@@ -5,13 +5,15 @@ import { vacationsAPI } from '../../api';
 import { useLanguage } from '../../context/LanguageContext';
 import { useApi } from '../../utils/useApi';
 import { formatDate, getLocale, todayKey } from '../../utils/format';
-import { fmtDays, typeIcon } from '../../utils/vacation';
-import { Badge, Button, Card, ErrorBox, Loading, Row, SectionTitle, StatTile, styles } from '../../components/ui';
+import { fmtDays, fmtHours, typeIcon } from '../../utils/vacation';
+import { printVacationReport } from '../../utils/vacationReport';
+import { Badge, Button, Card, ErrorBox, Loading, Row, SectionTitle, StatTile, showError, styles } from '../../components/ui';
 import { colors } from '../../theme';
 
 const barColor = { vacation: colors.brand, sick: '#F87171', other: '#9CA3AF' };
 
-// One person's vacation statistics for a year (same data as the web modal).
+// One person's vacation statistics for a year (same data as the web modal),
+// incl. overtime / day notes; printable as a report.
 export default function VacationStats() {
   const params = useLocalSearchParams();
   const { t } = useLanguage();
@@ -28,6 +30,7 @@ export default function VacationStats() {
   const plannedPct = available > 0 ? Math.min(100 - usedPct, (s.planned / available) * 100) : 0;
   const maxMonth = Math.max(1, ...data.months.map((m) => m.vacation + m.sick + m.other));
   const today = todayKey();
+  const print = () => printVacationReport(data, year, t).catch((err) => showError(t('common.error'), err.message));
   const state = (e) => (e.end_date < today ? t('vacations.statePast') : e.start_date > today ? t('vacations.stateUpcoming') : t('vacations.stateNow'));
 
   return (
@@ -37,6 +40,7 @@ export default function VacationStats() {
         <Button title='‹' small variant='secondary' onPress={() => setYear(year - 1)} />
         <Text style={{ fontSize: 18, fontWeight: '700' }}>{year}</Text>
         <Button title='›' small variant='secondary' onPress={() => setYear(year + 1)} />
+        <Button title={`🖨️ ${t('vacations.print')}`} small variant='secondary' onPress={print} />
       </Row>
 
       <Row style={{ marginBottom: 8 }}>
@@ -55,6 +59,7 @@ export default function VacationStats() {
       <Row style={{ marginBottom: 12 }}>
         <StatTile label={t('vacations.colSick')} value={fmtDays(s.sick)} color={colors.red} />
         <StatTile label={t('vacations.colOther')} value={fmtDays(s.other)} color={colors.gray} />
+        <StatTile label={t('vacations.colOvertime')} value={fmtHours(s.overtime_balance)} color={s.overtime_balance < 0 ? colors.red : colors.orange} />
       </Row>
 
       <Card>
@@ -119,6 +124,23 @@ export default function VacationStats() {
               </Text>
               <Badge label={state(e)} color={e.end_date < today ? 'gray' : e.start_date > today ? 'blue' : 'green'} />
             </View>
+          </Row>
+        </Card>
+      ))}
+
+      <SectionTitle>
+        {t('vacations.overtimeTitle')} ({t('vacations.overtimeThisYear', { hours: fmtHours(s.overtime_hours) })})
+      </SectionTitle>
+      {(data.overtime || []).length === 0 ? <Text style={styles.small}>{t('vacations.noOvertime')}</Text> : null}
+      {(data.overtime || []).map((o) => (
+        <Card key={`ot${o.id}`} style={{ paddingVertical: 10 }}>
+          <Row>
+            <Text style={{ fontSize: 20 }}>{o.hours ? '⏱️' : '📝'}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontWeight: '600', color: colors.text }}>{formatDate(o.date)}</Text>
+              {o.note ? <Text style={styles.small}>{o.note}</Text> : null}
+            </View>
+            {o.hours ? <Text style={{ fontWeight: '800', color: o.hours < 0 ? colors.red : colors.text }}>{fmtHours(o.hours)}</Text> : null}
           </Row>
         </Card>
       ))}

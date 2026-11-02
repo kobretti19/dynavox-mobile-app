@@ -29,19 +29,25 @@ export const monthGrid = (year, month) => {
   return cells;
 };
 
-// Mon-Fri days between two keys, minus holidays; a half day counts 0.5.
+// Mon-Fri days between two keys, minus holidays; half days count 0.5 each.
 export const workingDays = (start, end, halfDay, holidayMap = {}) => {
   if (!start || !end || end < start) return 0;
   let days = 0;
   for (let d = keyToDate(start); toKey(d) <= end; d.setDate(d.getDate() + 1)) {
     if (d.getDay() !== 0 && d.getDay() !== 6 && !holidayMap[toKey(d)]) days += 1;
   }
-  return halfDay ? Math.min(days, 0.5) : days;
+  return halfDay ? days / 2 : days;
 };
 
 export const entriesOn = (entries, key) => entries.filter((e) => e.start_date <= key && e.end_date >= key);
 
 export const fmtDays = (n) => (Number.isInteger(Number(n)) ? String(Number(n)) : Number(n).toFixed(1));
+
+// Overtime hours, signed: +2 h, -0.5 h, 0 h.
+export const fmtHours = (n) => {
+  const v = Math.round(Number(n || 0) * 100) / 100;
+  return `${v > 0 ? '+' : ''}${v} h`;
+};
 
 const pad = (n) => String(n).padStart(2, '0');
 const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
