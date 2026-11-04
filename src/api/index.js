@@ -80,6 +80,7 @@ export const ordersAPI = {
     api.post(`/orders/${orderId}/items`, itemData),
   updateItem: (itemId, data) => api.patch(`/orders/item/${itemId}`, data),
   deleteItem: (itemId) => api.delete(`/orders/item/${itemId}`),
+  transferItem: (itemId, data) => api.post(`/orders/item/${itemId}/transfer`, data),
 };
 
 // Stock API

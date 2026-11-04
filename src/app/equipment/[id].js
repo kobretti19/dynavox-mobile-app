@@ -4,6 +4,7 @@ import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { equipmentAPI, equipmentTemplatesAPI } from '../../api';
 import { errorMessage } from '../../api/client';
 import { useLanguage } from '../../context/LanguageContext';
+import { useAuth } from '../../context/AuthContext';
 import { useApi } from '../../utils/useApi';
 import { formatDate, formatDateTime } from '../../utils/format';
 import { Button, Card, ErrorBox, InfoRow, Input, Loading, Row, SectionTitle, Sheet, confirm, showError, styles } from '../../components/ui';
@@ -13,6 +14,7 @@ import { colors } from '../../theme';
 export default function EquipmentDetail() {
   const { id } = useLocalSearchParams();
   const { t } = useLanguage();
+  const { isAdmin } = useAuth();
   const { data: e, loading, error, refreshing, refresh, reload } = useApi(() => equipmentAPI.getById(id), [id]);
   const [showEdit, setShowEdit] = useState(false);
   const [templateName, setTemplateName] = useState(null);
@@ -117,7 +119,7 @@ export default function EquipmentDetail() {
         ) : null}
 
         <Button title={t('equipment.saveAsTemplate')} variant='secondary' style={{ marginTop: 12 }} onPress={() => setTemplateName(e.model || '')} />
-        <Button title={t('equipmentTable.deleteEquipmentTitle')} variant='dangerOutline' onPress={remove} style={{ marginTop: 10 }} />
+        {isAdmin ? <Button title={t('equipmentTable.deleteEquipmentTitle')} variant='dangerOutline' onPress={remove} style={{ marginTop: 10 }} /> : null}
       </ScrollView>
 
       <EntityForm

@@ -3,9 +3,10 @@ import { FlatList, RefreshControl, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { partsAPI } from '../../api';
 import { useLanguage } from '../../context/LanguageContext';
+import { useAuth } from '../../context/AuthContext';
 import { useApi } from '../../utils/useApi';
 import { includesQuery, formatMoney } from '../../utils/format';
-import { Badge, Button, Card, Empty, ErrorBox, Fab, Loading, Row, Select, confirm, Sheet, StatTile, styles } from '../../components/ui';
+import { Badge, Button, Card, Empty, ErrorBox, Fab, Loading, Row, Select, confirm, Sheet, StatTile, showError, styles } from '../../components/ui';
 import PartForm from '../../components/PartForm';
 import ScanSearchBar from '../../components/ScanSearchBar';
 import { findPartByCode } from '../../utils/codes';
@@ -16,6 +17,7 @@ const uniq = (list, key) => [...new Set(list.map((p) => p[key]).filter(Boolean))
 
 export default function Parts() {
   const { t } = useLanguage();
+  const { isAdmin } = useAuth();
   const { data, error, loading, refreshing, refresh, reload } = useApi(() => partsAPI.getAll());
   const parts = data || [];
   const [q, setQ] = useState('');
@@ -49,6 +51,10 @@ export default function Parts() {
       return;
     }
     setQ(code);
+    if (!isAdmin) {
+      showError(t('common.error'), t('mobile.scanPartNotFound', { code }));
+      return;
+    }
     if (await confirm(t('mobile.scanPartNotFound', { code }), t('mobile.scanCreatePartQuestion'), { confirmText: t('mobile.scanCreatePart'), cancelText: t('common.cancel'), destructive: false })) {
       setCreateInitial({ sku: code });
       setShowCreate(true);
@@ -126,12 +132,14 @@ export default function Parts() {
           );
         }}
       />
-      <Fab
-        onPress={() => {
-          setCreateInitial(null);
-          setShowCreate(true);
-        }}
-      />
+      {isAdmin ? (
+        <Fab
+          onPress={() => {
+            setCreateInitial(null);
+            setShowCreate(true);
+          }}
+        />
+      ) : null}
 
       <Sheet visible={showFilters} onClose={() => setShowFilters(false)} title={t('mobile.filters')}>
         <Select

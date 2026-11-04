@@ -582,11 +582,11 @@ export default function RepairDetail() {
               options={partOptions}
               placeholder={t('repairReport.searchOrCreatePart')}
               createLabel={t('common.create')}
-              onCreate={async (name) => {
+              onCreate={user?.userType === 'admin' ? async (name) => {
                 const res = await partsAPI.create({ name });
                 await loadLookups();
                 return res.data.data.id;
-              }}
+              } : undefined}
               onChange={(v) => setPartForm({ ...partForm, part_id: v })}
             />
             <Row style={{ alignItems: 'flex-end' }}>

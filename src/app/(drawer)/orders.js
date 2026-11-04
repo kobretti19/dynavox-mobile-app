@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { ordersAPI, partsAPI } from '../../api';
 import { errorMessage } from '../../api/client';
 import { useLanguage } from '../../context/LanguageContext';
+import { useAuth } from '../../context/AuthContext';
 import { useApi } from '../../utils/useApi';
 import { formatDate, formatMoney, includesQuery } from '../../utils/format';
 import { orderStatusColor } from '../../utils/status';
@@ -18,6 +19,7 @@ const STATUSES = ['draft', 'pending', 'ordered', 'partial', 'delivered', 'comple
 
 export default function Orders() {
   const { t } = useLanguage();
+  const { isAdmin } = useAuth();
   const orders = useApi(() => ordersAPI.getAll());
   const stats = useApi(() => ordersAPI.getStats());
   const [q, setQ] = useState('');
@@ -91,6 +93,10 @@ export default function Orders() {
       } else {
         pickPart(part);
       }
+      return;
+    }
+    if (!isAdmin) {
+      showError(t('common.error'), t('mobile.scanPartNotFound', { code }));
       return;
     }
     if (await confirm(t('mobile.scanPartNotFound', { code }), t('mobile.scanCreatePartQuestion'), { confirmText: t('mobile.scanCreatePart'), cancelText: t('common.cancel'), destructive: false })) {

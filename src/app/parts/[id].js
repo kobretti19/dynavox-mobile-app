@@ -4,6 +4,7 @@ import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { partsAPI, stockAPI } from '../../api';
 import { errorMessage } from '../../api/client';
 import { useLanguage } from '../../context/LanguageContext';
+import { useAuth } from '../../context/AuthContext';
 import { useApi } from '../../utils/useApi';
 import { formatDateTime, formatMoney } from '../../utils/format';
 import {
@@ -30,6 +31,7 @@ import { colors } from '../../theme';
 export default function PartDetail() {
   const { id } = useLocalSearchParams();
   const { t } = useLanguage();
+  const { isAdmin } = useAuth();
   const part = useApi(() => partsAPI.getById(id), [id]);
   const movements = useApi(() => stockAPI.getMovementsByPart(id), [id]);
   const allParts = useApi(() => partsAPI.getAll(), []);
@@ -176,7 +178,7 @@ export default function PartDetail() {
           ))
         )}
 
-        <Button title={t('partsTable.deletePart')} variant='dangerOutline' onPress={remove} style={{ marginTop: 20 }} />
+        {isAdmin ? <Button title={t('partsTable.deletePart')} variant='dangerOutline' onPress={remove} style={{ marginTop: 20 }} /> : null}
       </ScrollView>
 
       <PartForm

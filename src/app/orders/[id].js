@@ -4,6 +4,7 @@ import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { ordersAPI, partsAPI } from '../../api';
 import { errorMessage } from '../../api/client';
 import { useLanguage } from '../../context/LanguageContext';
+import { useAuth } from '../../context/AuthContext';
 import { formatDateTime, formatMoney } from '../../utils/format';
 import { CLOSED_ITEM_STATUSES, orderStatusColor } from '../../utils/status';
 import { Badge, Button, Card, ErrorBox, Input, Loading, Row, SectionTitle, Segmented, Select, Sheet, confirm, showError, styles } from '../../components/ui';
@@ -18,6 +19,7 @@ const ITEM_STATUSES = ['pending', 'partial', 'delivered', 'backorder', 'cancelle
 export default function OrderDetail() {
   const { id } = useLocalSearchParams();
   const { t } = useLanguage();
+  const { isAdmin } = useAuth();
   const [order, setOrder] = useState(null);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -158,6 +160,10 @@ export default function OrderDetail() {
       pickNewItemPart(part);
       return;
     }
+    if (!isAdmin) {
+      showError(t('common.error'), t('mobile.scanPartNotFound', { code }));
+      return;
+    }
     if (await confirm(t('mobile.scanPartNotFound', { code }), t('mobile.scanCreatePartQuestion'), { confirmText: t('mobile.scanCreatePart'), cancelText: t('common.cancel'), destructive: false })) {
       setNewPart({ sku: code });
     }
@@ -202,9 +208,7 @@ export default function OrderDetail() {
       return;
     }
     run(async () => {
-      await ordersAPI.addItem(transfer.target, { part_id: item.part_id, quantity: qty, unit_price: item.unit_price || 0, notes: item.notes || null });
-      if (qty >= item.quantity_ordered) await ordersAPI.deleteItem(item.id);
-      else await ordersAPI.updateItem(item.id, { quantity: item.quantity_ordered - qty });
+      await ordersAPI.transferItem(item.id, { target_order_id: transfer.target, quantity: qty });
       setTransfer(null);
     }, 'orders.alertTransferFailed');
   };
@@ -242,7 +246,7 @@ export default function OrderDetail() {
               <Button title={order.status === 'partial' ? `📦 ${t('orders.receiveMore')}` : `📦 ${t('orders.receive')}`} small variant='success' onPress={openDelivery} disabled={busy} />
             ) : null}
             {['ordered', 'partial'].includes(order.status) ? <Button title={t('orders.completeOrder')} small variant='secondary' onPress={complete} disabled={busy} /> : null}
-            <Button title={t('orders.cancelOrderTitle')} small variant='dangerOutline' onPress={cancelOrder} disabled={busy} />
+            {isAdmin ? <Button title={t('orders.cancelOrderTitle')} small variant='dangerOutline' onPress={cancelOrder} disabled={busy} /> : null}
           </Row>
         ) : null}
 
@@ -427,18 +431,20 @@ export default function OrderDetail() {
                 setTransfer({ item, target: null, qty: String(item.quantity_ordered) });
               }}
             />
-            <Button
-              title={t('common.remove')}
-              variant='dangerOutline'
-              style={{ marginTop: 10 }}
-              onPress={async () => {
-                if (!(await confirm(t('mobile.confirmDeleteTitle'), t('orders.confirmRemoveItem'), { confirmText: t('common.remove'), cancelText: t('common.cancel') }))) return;
-                run(async () => {
-                  await ordersAPI.deleteItem(itemEdit.item.id);
-                  setItemEdit(null);
-                }, 'orders.alertDeleteItemFailed');
-              }}
-            />
+            {isAdmin ? (
+              <Button
+                title={t('common.remove')}
+                variant='dangerOutline'
+                style={{ marginTop: 10 }}
+                onPress={async () => {
+                  if (!(await confirm(t('mobile.confirmDeleteTitle'), t('orders.confirmRemoveItem'), { confirmText: t('common.remove'), cancelText: t('common.cancel') }))) return;
+                  run(async () => {
+                    await ordersAPI.deleteItem(itemEdit.item.id);
+                    setItemEdit(null);
+                  }, 'orders.alertDeleteItemFailed');
+                }}
+              />
+            ) : null}
           </>
         ) : null}
       </Sheet>
