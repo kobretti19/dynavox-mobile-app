@@ -61,7 +61,18 @@ const detailsFromTicket = (ticket) => ({
   small_material_cost: ticket.small_material_cost ?? 0,
   shipping_cost: ticket.shipping_cost ?? 0,
   discount_percent: ticket.discount_percent ?? 0,
+  ship_custom: !!ticket.ship_custom,
+  ship_name: ticket.ship_name || '',
+  ship_street: ticket.ship_street || '',
+  ship_zip: ticket.ship_zip || '',
+  ship_city: ticket.ship_city || '',
 });
+
+// Default ship-to (whoever `shipping` points at) as display lines.
+const shipToRecord = (details, lookups) =>
+  details.shipping === 'Händler'
+    ? lookups.dealers.find((d) => d.id === Number(details.dealer_id))
+    : lookups.customers.find((c) => c.id === Number(details.customer_id));
 
 export default function RepairDetail() {
   const { id } = useLocalSearchParams();
@@ -519,6 +530,41 @@ export default function RepairDetail() {
                 onChange={set('carrier')}
                 style={{ marginBottom: 14 }}
               />
+              {(() => {
+                const rec = shipToRecord(details, lookups);
+                const lines = rec
+                  ? [rec.name, [rec.street, rec.house_number].filter(Boolean).join(' '), [rec.zip, rec.city].filter(Boolean).join(' ')].filter(Boolean)
+                  : [];
+                return (
+                  <>
+                    <Text style={styles.label}>{t('repairReport.shipAddressLabel')}</Text>
+                    <Text style={{ color: details.ship_custom ? colors.textLight : colors.text, textDecorationLine: details.ship_custom ? 'line-through' : 'none', marginBottom: 8 }}>
+                      {!rec ? t('repairReport.shipAddressSelectFirst') : lines.length > 1 ? lines.join(', ') : `${rec.name || ''} – ${t('repairReport.shipAddressNone')}`}
+                    </Text>
+                    <SwitchRow
+                      label={t('repairReport.shipCustomLabel')}
+                      value={details.ship_custom}
+                      onValueChange={(v) =>
+                        setDetails((d) => ({ ...d, ship_custom: v, ship_name: v && !d.ship_name ? rec?.name || '' : d.ship_name }))
+                      }
+                    />
+                    {details.ship_custom ? (
+                      <>
+                        <Input label={t('repairReport.shipName')} value={details.ship_name} onChangeText={set('ship_name')} />
+                        <Input label={t('repairReport.shipStreet')} value={details.ship_street} onChangeText={set('ship_street')} />
+                        <Row>
+                          <View style={{ flex: 1 }}>
+                            <Input label={t('repairReport.shipZip')} value={details.ship_zip} onChangeText={set('ship_zip')} keyboardType='number-pad' />
+                          </View>
+                          <View style={{ flex: 2 }}>
+                            <Input label={t('repairReport.shipCity')} value={details.ship_city} onChangeText={set('ship_city')} />
+                          </View>
+                        </Row>
+                      </>
+                    ) : null}
+                  </>
+                );
+              })()}
             </>
           ) : null}
           <SwitchRow label={t('repairReport.warranty')} value={details.warranty} onValueChange={set('warranty')} />
