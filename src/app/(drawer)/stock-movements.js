@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { FlatList, RefreshControl, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { partsAPI, stockAPI } from '../../api';
+import { useCreatePart } from '../../utils/useCreatePart';
 import { errorMessage } from '../../api/client';
 import { useLanguage } from '../../context/LanguageContext';
 import { useApi } from '../../utils/useApi';
@@ -31,6 +32,7 @@ export default function StockMovements() {
   const alerts = useApi(() => stockAPI.getAlerts());
   const [form, setForm] = useState(null);
   const [parts, setParts] = useState([]);
+  const createPart = useCreatePart((part) => setParts((prev) => [...prev, part]));
   const [saving, setSaving] = useState(false);
 
   const reloadAll = () => {
@@ -228,6 +230,8 @@ export default function StockMovements() {
               options={parts.map((p) => ({ value: p.id, label: `${p.name}${p.color ? ` (${p.color})` : ''}`, sublabel: `${t('stockMovements.currentStock')}: ${p.quantity}${p.sku ? ` · ${p.sku}` : ''}` }))}
               onChange={(v) => setForm({ ...form, part_id: v })}
               placeholder={t('stockMovements.searchPartPlaceholder')}
+              onCreate={createPart}
+              createLabel={t('common.create')}
             />
             {selectedPart ? (
               <Text style={[styles.subtitle, { marginTop: -6, marginBottom: 12 }]}>

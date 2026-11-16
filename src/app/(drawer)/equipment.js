@@ -8,6 +8,7 @@ import { formatDate, includesQuery } from '../../utils/format';
 import { Badge, Button, Card, Empty, ErrorBox, Fab, Loading, Row, StatTile, styles } from '../../components/ui';
 import ProduceSheet from '../../components/ProduceSheet';
 import ScanSearchBar from '../../components/ScanSearchBar';
+import { serialMatches } from '../../utils/codes';
 import { colors } from '../../theme';
 
 // Monday 00:00 of the week containing d.
@@ -42,7 +43,9 @@ export default function Equipment() {
   const filtered = useMemo(
     () =>
       items.filter(
-        (e) => inPeriod(e, period) && includesQuery(q, e.model, e.serial_number, e.brand, e.category, e.article_id, e.created_by_name),
+        (e) =>
+          inPeriod(e, period) &&
+          (includesQuery(q, e.model, e.serial_number, e.brand, e.category, e.article_id, e.created_by_name) || serialMatches(q, e.serial_number)),
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [items, q, period],

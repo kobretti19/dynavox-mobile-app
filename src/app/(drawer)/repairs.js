@@ -31,7 +31,7 @@ import LookupField from '../../components/LookupField';
 import EntityForm from '../../components/EntityForm';
 import OwnProductBadge, { ForeignNotice, ownTone } from '../../components/OwnProductBadge';
 import { deviceFields } from '../../utils/entityFields';
-import { codeMatches } from '../../utils/codes';
+import { codeMatches, repairSerials, serialMatches } from '../../utils/codes';
 import { deviceFromOwnProduct, devicePrefill, findOwnProduct } from '../../utils/ownProducts';
 import { colors, tone } from '../../theme';
 
@@ -75,7 +75,8 @@ export default function Repairs() {
         const created = r.created_at ? toKey(new Date(r.created_at)) : null;
         const total = Number(r.total_cost) || 0;
         return (
-          includesQuery(q, buildReportId(r.id, r.created_at), r.customer_name, r.dealer_name, r.device_summary, r.problem_description, r.type, r.assignee_names) &&
+          (includesQuery(q, buildReportId(r.id, r.created_at), r.customer_name, r.dealer_name, r.device_summary, r.problem_description, r.type, r.assignee_names) ||
+            serialMatches(q, repairSerials(r))) &&
           (statusTab === 'all' || (statusTab === 'open' ? r.status !== 'abgeschlossen' : r.status === statusTab)) &&
           (!filters.status || r.status === filters.status) &&
           (!filters.type || r.type === filters.type) &&

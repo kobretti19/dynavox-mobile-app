@@ -392,7 +392,7 @@ export const Select = ({
                         const created = await onCreate(text);
                         if (created !== undefined && created !== null) onChange(created, null);
                       } catch (err) {
-                        Alert.alert('Error', err?.response?.data?.error || err?.message || 'Error');
+                        Alert.alert('Error', err?.response?.data?.error || err?.response?.data?.message || err?.message || 'Error');
                       }
                     } else {
                       onChange(text, null);

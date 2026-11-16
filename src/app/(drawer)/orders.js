@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { ordersAPI, partsAPI } from '../../api';
+import { useCreatePart } from '../../utils/useCreatePart';
 import { errorMessage } from '../../api/client';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
@@ -26,6 +27,7 @@ export default function Orders() {
   const [status, setStatus] = useState('open');
   const [showCreate, setShowCreate] = useState(false);
   const [parts, setParts] = useState([]);
+  const createPart = useCreatePart((part) => setParts((prev) => [...prev, part]));
   const [form, setForm] = useState({ order_number: '', notes: '', items: [] });
   const [item, setItem] = useState({ part_id: null, quantity: '1', unit_price: '', notes: '' });
   const [saving, setSaving] = useState(false);
@@ -236,6 +238,8 @@ export default function Orders() {
                   setItem({ ...item, part_id: v, unit_price: p ? String(p.purchase_price || '') : '' });
                 }}
                 placeholder={t('orders.searchPartPlaceholder')}
+                onCreate={createPart}
+                createLabel={t('common.create')}
               />
             </View>
             <ScanButton style={{ height: 44, marginBottom: 14 }} onScanned={scanPart} />

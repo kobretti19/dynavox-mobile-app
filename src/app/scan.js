@@ -5,7 +5,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { devicesAPI, equipmentAPI, equipmentTemplatesAPI, partsAPI, repairsAPI } from '../api';
-import { cleanCode, codeMatches, findPartByCode } from '../utils/codes';
+import { cleanCode, codeMatches, findPartByCode, repairSerials, serialMatches } from '../utils/codes';
 import { useLanguage } from '../context/LanguageContext';
 import { buildReportId, partStatus, repairStatusColor } from '../utils/status';
 import { Badge, Button, Card, Row, styles } from '../components/ui';
@@ -44,13 +44,19 @@ const lookup = async (code) => {
   const exactEquipment = equipment.filter((e) => codeMatches(code, e.serial_number, e.article_id));
   const fuzzyEquipment = exactEquipment.length
     ? []
-    : equipment.filter((e) => cc.length >= 4 && cleanCode(e.serial_number).includes(cc)).slice(0, 10);
+    : equipment.filter((e) => cc.length >= 4 && serialMatches(code, e.serial_number)).slice(0, 10);
   const matchTemplates = templates.filter((tp) => codeMatches(code, tp.article_id));
-  const exactDevices = devices.filter((d) => norm(d.serial_number) === c);
+  const exactDevices = devices.filter((d) => codeMatches(code, d.serial_number));
   const fuzzyDevices = exactDevices.length
     ? []
-    : devices.filter((d) => c.length >= 4 && norm(d.serial_number).includes(c)).slice(0, 10);
-  const matchRepairs = repairs.filter((r) => buildReportId(r.id, r.created_at) === String(code).trim() || String(r.id) === String(code).trim());
+    : devices.filter((d) => cc.length >= 4 && serialMatches(code, d.serial_number)).slice(0, 10);
+  // Repairs by ticket number, or by the serial of a device on the ticket.
+  const matchRepairs = repairs.filter(
+    (r) =>
+      buildReportId(r.id, r.created_at) === String(code).trim() ||
+      String(r.id) === String(code).trim() ||
+      (cc.length >= 4 && serialMatches(code, repairSerials(r))),
+  );
 
   return {
     parts: [...exactParts, ...fuzzyParts],

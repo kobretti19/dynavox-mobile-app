@@ -6,7 +6,7 @@ import { colors } from '../theme';
 
 // Editable list of { id, quantity } rows (parts of a template / equipment,
 // components of a template...). `options` = [{ value, label, sublabel }].
-const PartsPicker = ({ label, rows, onChange, options, placeholder, unitLabel }) => {
+const PartsPicker = ({ label, rows, onChange, options, placeholder, unitLabel, onCreate }) => {
   const { t } = useLanguage();
   const [selected, setSelected] = useState(null);
   const [qty, setQty] = useState('1');
@@ -57,7 +57,7 @@ const PartsPicker = ({ label, rows, onChange, options, placeholder, unitLabel })
         );
       })}
       <View style={{ marginTop: 8 }}>
-        <Select label='' value={selected} options={options} placeholder={placeholder} onChange={setSelected} />
+        <Select label='' value={selected} options={options} placeholder={placeholder} onChange={setSelected} onCreate={onCreate} createLabel={onCreate ? t('common.create') : undefined} />
         {selected ? (
           <Row style={{ marginTop: -6 }}>
             <Button title='−' small variant='secondary' onPress={() => setQty(String(Math.max(1, (parseInt(qty, 10) || 1) - 1)))} />

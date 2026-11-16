@@ -4,7 +4,28 @@ export const cleanCode = (v) =>
   String(v ?? '')
     .trim()
     .toLowerCase()
-    .replace(/[\s\-_./]/g, '');
+    .replace(/[\s\-_./:#]/g, '');
+
+// Scanned / typed text vs. serial numbers. Ignores case and separators, and
+// also hits when the scan carries extra text around the serial ("S/N: 123",
+// barcode prefix / check digit) or is only part of it.
+export const serialMatches = (code, ...serials) => {
+  const c = cleanCode(code);
+  if (!c) return false;
+  return serials.flat().some((s) => {
+    const v = cleanCode(s);
+    if (!v) return false;
+    if (v === c || v.includes(c)) return true;
+    return v.length >= 4 && c.includes(v);
+  });
+};
+
+// Serials of a repair ticket (device_serials from the API, or parsed from the
+// "Brand Model (SN)" summary of older backends).
+export const repairSerials = (r) =>
+  r.device_serials
+    ? String(r.device_serials).split(', ')
+    : [...String(r.device_summary || '').matchAll(/\(([^)]*)\)/g)].map((m) => m[1]);
 
 export const codeMatches = (code, ...fields) => {
   const c = cleanCode(code);

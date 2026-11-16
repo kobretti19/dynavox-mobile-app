@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { ordersAPI, partsAPI } from '../../api';
+import { useCreatePart } from '../../utils/useCreatePart';
 import { errorMessage } from '../../api/client';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
@@ -26,6 +27,7 @@ export default function OrderDetail() {
   const [busy, setBusy] = useState(false);
   const [header, setHeader] = useState({ order_number: '', notes: '' });
   const [parts, setParts] = useState([]);
+  const createPart = useCreatePart((part) => setParts((prev) => [...prev, part]));
   const [allOrders, setAllOrders] = useState([]);
   const [newItem, setNewItem] = useState({ part_id: null, quantity: '1', unit_price: '', notes: '' });
   const [delivery, setDelivery] = useState(null);
@@ -296,6 +298,8 @@ export default function OrderDetail() {
                     setNewItem({ ...newItem, part_id: v, unit_price: p ? String(p.purchase_price || '') : '' });
                   }}
                   placeholder={t('orders.addPartPlaceholder')}
+                  onCreate={createPart}
+                  createLabel={t('common.create')}
                 />
               </View>
               <ScanButton style={{ height: 44, marginBottom: 14 }} onScanned={scanNewItem} />

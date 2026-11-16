@@ -9,13 +9,14 @@ import { deviceFields } from '../../utils/entityFields';
 import { Badge, Card, Empty, ErrorBox, Fab, Loading, Row, styles } from '../../components/ui';
 import EntityForm from '../../components/EntityForm';
 import ScanSearchBar from '../../components/ScanSearchBar';
+import { serialMatches } from '../../utils/codes';
 
 export default function Devices() {
   const { t } = useLanguage();
   const { data, error, loading, refreshing, refresh, reload } = useApi(() => devicesAPI.getAll());
   const [q, setQ] = useState('');
   const [showCreate, setShowCreate] = useState(false);
-  const list = useMemo(() => (data || []).filter((d) => includesQuery(q, d.serial_number, d.brand, d.model)), [data, q]);
+  const list = useMemo(() => (data || []).filter((d) => includesQuery(q, d.serial_number, d.brand, d.model) || serialMatches(q, d.serial_number)), [data, q]);
 
   if (loading) return <Loading />;
   if (error && !data) return <ErrorBox message={t('devices.errorLoading', { error })} onRetry={refresh} />;

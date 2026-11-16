@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { equipmentTemplatesAPI, partsAPI } from '../api';
+import { useCreatePart } from '../utils/useCreatePart';
 import { errorMessage } from '../api/client';
 import { useLanguage } from '../context/LanguageContext';
 import { Input, Sheet, SwitchRow, showError } from './ui';
@@ -13,6 +14,7 @@ const TemplateForm = ({ visible, template, duplicate, onClose, onSaved }) => {
   const [partRows, setPartRows] = useState([]);
   const [componentRows, setComponentRows] = useState([]);
   const [parts, setParts] = useState([]);
+  const createPart = useCreatePart((part) => setParts((prev) => [...prev, part]));
   const [templates, setTemplates] = useState([]);
   const [saving, setSaving] = useState(false);
 
@@ -96,6 +98,7 @@ const TemplateForm = ({ visible, template, duplicate, onClose, onSaved }) => {
         onChange={setPartRows}
         options={partOptions}
         placeholder={t('equipmentTemplates.searchPartPlaceholder')}
+        onCreate={createPart}
       />
       <PartsPicker
         label={t('equipmentTemplates.componentsConfiguration')}

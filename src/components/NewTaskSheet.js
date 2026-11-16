@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Text } from 'react-native';
 import { equipmentTemplatesAPI, partsAPI, productionTasksAPI, usersAPI } from '../api';
+import { useCreatePart } from '../utils/useCreatePart';
 import { errorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -15,6 +16,7 @@ const NewTaskSheet = ({ visible, prefill, onClose, onSent }) => {
   const { user } = useAuth();
   const [form, setForm] = useState({ item_type: 'part', part_id: null, template_id: null, quantity: '', note: '', recipients: [] });
   const [parts, setParts] = useState([]);
+  const createPart = useCreatePart((part) => setParts((prev) => [...prev, part]));
   const [components, setComponents] = useState([]);
   const [users, setUsers] = useState([]);
   const [sending, setSending] = useState(false);
@@ -91,6 +93,8 @@ const NewTaskSheet = ({ visible, prefill, onClose, onSent }) => {
           onChange={(v) => setForm({ ...form, part_id: v })}
           placeholder={t('productionTasks.selectPart')}
           hint={t('productionTasks.lowStockFirst')}
+          onCreate={createPart}
+          createLabel={t('common.create')}
         />
       ) : null}
       {form.item_type === 'component' ? (
