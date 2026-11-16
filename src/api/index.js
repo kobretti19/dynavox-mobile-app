@@ -165,6 +165,11 @@ export const devicesAPI = {
 };
 
 // Repairs API
+// AI writing help for notes: action "improve" or "translate" (language de/fr/en/it)
+export const aiAPI = {
+  text: (text, action, language) => api.post("/ai/text", { text, action, language }),
+};
+
 export const repairsAPI = {
   getAll: () => api.get("/repairs"),
   getById: (id) => api.get(`/repairs/${id}`),

@@ -58,7 +58,13 @@
           "microphonePermission": false
         }
       ],
-      "expo-localization"
+      "expo-localization",
+      [
+        "react-native-document-scanner-plugin",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to scan documents and photos for repairs."
+        }
+      ]
     ],
     "extra": {
       "apiUrl": "https://dynservice.dynavox.ch/api",

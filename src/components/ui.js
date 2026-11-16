@@ -18,6 +18,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, tone } from '../theme';
 import { useLanguage } from '../context/LanguageContext';
+import AiTextActions from './AiTextActions';
 
 export const Card = ({ children, style, onPress, onLongPress }) => {
   if (onPress || onLongPress) {
@@ -136,7 +137,9 @@ export const Field = ({ label, children, hint, style }) => (
   </View>
 );
 
-export const Input = ({ label, hint, style, multiline, ...props }) => (
+// Multiline inputs (notes, descriptions) get AI writing help underneath;
+// pass ai={false} to turn it off.
+export const Input = ({ label, hint, style, multiline, ai = true, ...props }) => (
   <Field label={label} hint={hint}>
     <TextInput
       placeholderTextColor={colors.textLight}
@@ -144,6 +147,7 @@ export const Input = ({ label, hint, style, multiline, ...props }) => (
       multiline={multiline}
       {...props}
     />
+    {multiline && ai && props.editable !== false ? <AiTextActions value={props.value} onChangeText={props.onChangeText} /> : null}
   </Field>
 );
 

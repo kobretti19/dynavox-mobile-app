@@ -34,6 +34,7 @@ import { deviceFields } from '../../utils/entityFields';
 import EntityForm from '../../components/EntityForm';
 import OwnProductBadge, { ForeignNotice } from '../../components/OwnProductBadge';
 import { codeMatches } from '../../utils/codes';
+import { scanWithDocumentScanner } from '../../utils/documentScanner';
 import { deviceFromOwnProduct, devicePrefill, findOwnProduct } from '../../utils/ownProducts';
 
 const formatFileSize = (bytes) => {
@@ -238,9 +239,13 @@ export default function RepairDetail() {
     try {
       let result;
       if (source === 'camera') {
-        const perm = await ImagePicker.requestCameraPermissionsAsync();
-        if (!perm.granted) return;
-        result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8 });
+        const scanned = await scanWithDocumentScanner();
+        if (scanned) result = scanned;
+        else {
+          const perm = await ImagePicker.requestCameraPermissionsAsync();
+          if (!perm.granted) return;
+          result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8 });
+        }
       } else {
         result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8, allowsMultipleSelection: true, selectionLimit: 10 });
       }

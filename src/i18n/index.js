@@ -18,6 +18,7 @@ import orderPartsReport from './locales/orderPartsReport';
 import parts from './locales/parts';
 import partsTable from './locales/partsTable';
 import searchCreateSelect from './locales/searchCreateSelect';
+import ai from './locales/ai';
 import repairs from './locales/repairs';
 import repairReport from './locales/repairReport';
 import partDetails from './locales/partDetails';
@@ -59,6 +60,7 @@ const namespaces = {
   parts,
   partsTable,
   searchCreateSelect,
+  ai,
   repairs,
   repairReport,
   partDetails,
