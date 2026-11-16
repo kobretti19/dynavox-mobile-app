@@ -167,7 +167,8 @@ export const devicesAPI = {
 // Repairs API
 // AI writing help for notes: action "improve" or "translate" (language de/fr/en/it)
 export const aiAPI = {
-  text: (text, action, language) => api.post("/ai/text", { text, action, language }),
+  // The free self-hosted model runs on CPU and can need up to ~1 min.
+  text: (text, action, language) => api.post("/ai/text", { text, action, language }, { timeout: 65000 }),
 };
 
 export const repairsAPI = {
